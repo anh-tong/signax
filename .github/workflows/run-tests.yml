@@ -1,15 +1,14 @@
 # Continuous integration
 
-name: Test
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
-
   build:
 
     runs-on: ubuntu-latest
@@ -17,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
+        enable-cuda: ["no"] # ["yes", "no"] probably not possible to use github CI with CUDA requirements
 
     steps:
     - uses: actions/checkout@v3
@@ -29,12 +29,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install pytest pybind11 numpy jaxlib
-    
+
     - name: Checks with pre-commit
       uses: pre-commit/action@v3.0.0
 
     - name: Test with pytest
-    - run: |
+      env:
+        BUILD_WITH_CUDA: ${{ matrix.enable-cuda}}
+      run: |
+        echo "BUILD_WITH_CUDA=$SIGKAX_CUDA"
         python setup.py build_ext --inplace
         python -m pip install .
         python -m pytest --durations=0
