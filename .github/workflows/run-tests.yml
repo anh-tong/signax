@@ -37,7 +37,7 @@ jobs:
       env:
         BUILD_WITH_CUDA: ${{ matrix.enable-cuda}}
       run: |
-        echo "BUILD_WITH_CUDA=$SIGKAX_CUDA"
+        echo "BUILD_WITH_CUDA=$BUILD_WITH_CUDA"
         python setup.py build_ext --inplace
         python -m pip install .
         python -m pytest --durations=0
