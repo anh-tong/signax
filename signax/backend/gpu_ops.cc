@@ -1,3 +1,4 @@
+#include <cuda_runtime_api.h>
 #include "pybind11_helpers.h"
 
 namespace signax{

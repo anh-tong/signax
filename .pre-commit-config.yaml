@@ -17,3 +17,9 @@ repos:
     rev: 4.0.1
     hooks:
     - id: flake8
+
+  # Changes tabs to spaces
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.1.10
+    hooks:
+    - id: remove-tabs
