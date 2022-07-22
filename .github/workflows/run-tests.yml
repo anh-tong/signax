@@ -7,6 +7,14 @@ on:
     branches: [ "main" ]
 
 jobs:
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - uses: pre-commit/action@v3.0.0
+
   build:
 
     runs-on: ubuntu-latest
@@ -26,9 +34,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install pytest pybind11 numpy jaxlib
-        
-    - name: Checks with pre-commit
-      uses: pre-commit/action@v3
         
     - name: Test with pytest
         python setup.py build_ext --inplace
