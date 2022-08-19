@@ -1,8 +1,8 @@
-
 #include <iostream>
 #include <torch/torch.h>
 #include "pybind11_helpers.h"
-#include "signature.hpp"
+#include "signatory/signature.hpp"
+#include <torch/extension.h>  // to get the pybind11 stuff
 
 namespace signax
 {
@@ -53,7 +53,7 @@ namespace signax
     pybind11::dict Registrations()
     {
         pybind11::dict dict;
-        dict["cpu_signature_f32"] = EncapsulateFunction(cpu_signature<float>);
+        dict[""] = EncapsulateFunction(cpu_signature<float>);
         dict["cpu_signature_f64"] = EncapsulateFunction(cpu_signature<double>);
         return dict;
     }

@@ -11,24 +11,31 @@ if sys.platform.startswith("win"):  # windows
 else:  # linux or mac
     extra_compile_args.append("-fopenmp")
 
+metadata = {
+    "name": "signax",
+    "version": "1.0",
+    "author": "signax authors"
+}
+
+
 ext_modules = [
     cpp.CppExtension(
         name="cpu_ops",
         sources=[
+            "signax/backend/signatory/logsignature.cpp",
+            "signax/backend/signatory/lyndon.cpp",
+            "signax/backend/signatory/misc.cpp",
+            "signax/backend/signatory/signature.cpp",
+            "signax/backend/signatory/tensor_algebra_ops.cpp",
             "signax/backend/cpu_ops.cc",
-            "signax/backend/logsignature.cpp",
-            "signax/backend/lyndon.cpp",
-            "signax/backend/misc.cpp",
-            "signax/backend/signature.cpp",
-            "signax/backend/tensor_algebra_ops.cpp",
         ],
         depends=[
             "signax/backend/pybind11_helpers.h",
-            "signax/backend/logsignature.hpp",
-            "signax/backend/lyndon.hpp",
-            "signax/backend/misc.hpp",
-            "signax/backend/signature.hpp",
-            "signax/tensor_algebra_ops.hpp",
+            "signax/backend/signatory/logsignature.hpp",
+            "signax/backend/signatory/lyndon.hpp",
+            "signax/backend/signatory/misc.hpp",
+            "signax/backend/signatory/signature.hpp",
+            "signax/backend/signatory/tensor_algebra_ops.hpp",
         ],
         extra_compile_args=extra_compile_args,
     )
@@ -38,10 +45,12 @@ python_requires = "~=3.7"
 install_requires = ["jax>=0.3.10", "pybind11>=2.6", "cmake"]
 
 setuptools.setup(
-    name='signax',
-    version="1.0",
-    author="signax authors",
+    name=metadata["name"],
+    version=metadata["version"],
+    author=metadata["author"],
     ext_modules=ext_modules,
+    packages=[metadata["name"]],
+    ext_package=metadata["name"],
     cmdclass={"build_ext": cpp.BuildExtension},
     python_requires=python_requires,
     install_requires=install_requires,

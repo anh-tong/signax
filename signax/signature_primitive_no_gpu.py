@@ -11,7 +11,7 @@ from jaxlib import xla_client
 import torch
 from signax import cpu_ops
 
-for name, value in cpu_ops.cpu_registrations().items():
+for name, value in cpu_ops.registrations().items():
     xla_client.register_cpu_custom_call_target(name, value)
 
 
@@ -28,9 +28,9 @@ def _signature_cpu_translation(ctx, path, depth, platform="cpu"):
     dtype = path_shape.element_type()
 
     if dtype == np.float32:
-        cpu_op_name = b"cpu_signature_forward_f32"
+        cpu_op_name = b"cpu_signature_f32"
     elif dtype == np.float64:
-        cpu_op_name = b"cpu_signature_forward_f64"
+        cpu_op_name = b"cpu_signature_f64"
     else:
         raise NotImplementedError(f"dtype {dtype} is not supported")
 

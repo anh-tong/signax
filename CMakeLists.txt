@@ -13,7 +13,7 @@ include_directories("/home/anhth/anaconda3/lib/python3.9/site-packages/torch/inc
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/signax/backend)
 
-pybind11_add_module(cpu_ops ${CMAKE_CURRENT_LIST_DIR}/signax/backend/cpu_ops.cpp)
+pybind11_add_module(cpu_ops ${CMAKE_CURRENT_LIST_DIR}/signax/backend/cpu_ops.cc)
 install(TARGETS cpu_ops DESTINATION signax)
 
 if (BUILD_WITH_CUDA)
