@@ -7,6 +7,10 @@ find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 find_package(pybind11 CONFIG REQUIRED)
 
+find_package(Torch CONFIG REQUIRED)
+
+include_directories("/home/anhth/anaconda3/lib/python3.9/site-packages/torch/include/TH" "/home/anhth/anaconda3/lib/python3.9/site-packages/torch/include/THC")
+
 include_directories(${CMAKE_CURRENT_LIST_DIR}/signax/backend)
 
 pybind11_add_module(cpu_ops ${CMAKE_CURRENT_LIST_DIR}/signax/backend/cpu_ops.cpp)
