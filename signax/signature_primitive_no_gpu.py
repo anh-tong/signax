@@ -9,9 +9,9 @@ from jax.interpreters import xla
 from jaxlib import xla_client
 # from signax.backend import cpu_ops
 import torch
-from signax import _impl
+from signax import cpu_ops
 
-for name, value in _impl.cpu_registrations().items():
+for name, value in cpu_ops.cpu_registrations().items():
     xla_client.register_cpu_custom_call_target(name, value)
 
 

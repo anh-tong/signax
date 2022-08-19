@@ -25,7 +25,6 @@ project = 'signax'
 author = "Patrick Kidger"
 copyright = "2019, {}".format(author)
 author_email = "contact@kidger.site"
-url = "https://github.com/patrick-kidger/signatory"
 license = "Apache-2.0"
 python_requires = "~=3.6"
 keywords = "signature"
