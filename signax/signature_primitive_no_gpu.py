@@ -15,15 +15,28 @@ for name, value in cpu_ops.registrations().items():
     xla_client.register_cpu_custom_call_target(name, value)
 
 
+def get_signature_shape(path_shape, sig_depth):
+    batches, path_len, features = path_shape
+    total_features_size = 0
+    acc_features_size = features
+
+    for i in range(sig_depth):
+        total_features_size += acc_features_size
+        acc_features_size *= features
+
+    return batches, total_features_size
+
+
 def _signature_abstract(path, depth):
     dtype = dtypes.canonicalize_dtype(path.dtype)
-    output_shape = np.prod(path.shape)
-    return ShapedArray((output_shape,), dtype)
+    # return output_shape
+    # output_shape = get_signature_shape(path.shape, depth)
+    return ShapedArray(flattened_output_shape, dtype)
 
 
 def _signature_cpu_translation(ctx, path, depth, platform="cpu"):
     path_shape = ctx.get_shape(path)
-    tensor_dimensions = np.array(path_shape.dimensions())
+    path_dims = np.array(path_shape.dimensions())
 
     dtype = path_shape.element_type()
 
@@ -34,9 +47,9 @@ def _signature_cpu_translation(ctx, path, depth, platform="cpu"):
     else:
         raise NotImplementedError(f"dtype {dtype} is not supported")
 
-    path_dim = xla_client.ops.Constant(ctx, tensor_dimensions)
+    path_dim = xla_client.ops.Constant(ctx, path_dims)
     path_dim_shape = xla_client.Shape.array_shape(
-        np.dtype(np.int64), tensor_dimensions.shape, (0,)
+        np.dtype(np.int64), path_dims.shape, (0,)
     )
     depth_shape = xla_client.Shape.array_shape(np.dtype(np.int64), (), ())
 
@@ -46,7 +59,7 @@ def _signature_cpu_translation(ctx, path, depth, platform="cpu"):
         operands=(path, path_dim, depth),
         operand_shapes_with_layout=(path_shape, path_dim_shape, depth_shape),
         shape_with_layout=xla_client.Shape.array_shape(
-            dtype, (np.prod(tensor_dimensions),), (0,)
+            dtype, flattened_output_shape, (0,)
         ),
         # shape_with_layout=path_shape,
     )
@@ -58,9 +71,14 @@ def signature_cpu_batch(vector_arg_values, batch_axes):
     return res, batch_axes[0]
 
 
+flattened_output_shape = None
 def signature(path, depth):
+    global flattened_output_shape
+    output_shape = get_signature_shape(path.shape, depth)
+    flattened_output_shape = (np.prod(output_shape), )
+
     flattened_output = _signature_prim.bind(path, depth)
-    return flattened_output.reshape(path.shape)
+    return flattened_output.reshape(output_shape)
 
 
 _signature_prim = core.Primitive("signature")
