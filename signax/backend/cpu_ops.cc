@@ -17,13 +17,11 @@ namespace signax {
         auto options = torch::TensorOptions().dtype(torch::CppTypeToScalarType<T>());
         torch::Tensor path = torch::from_blob(pathSource, *pathShapeRef, options);
 
-        std::cout << "cpu_ops.cc::cpuSignatureForward\n";
-        std::cout << "Path: \n"
-                  << path << '\n';
+//        std::cout << "cpu_ops.cc::cpuSignatureForward\n";
+//        std::cout << "Path: \n" << path << '\n';
 
         int depth = (long int) *reinterpret_cast<int *>(in[2]);
-        std::cout << "Depth: \n"
-                  << depth << '\n';
+//        std::cout << "Depth: \n" << depth << '\n';
 
         auto *emptyTensor = new torch::Tensor();
 
@@ -40,8 +38,7 @@ namespace signax {
                 /*bool scalar_term*/ false);
 
         // DATA RECOVERY
-//        long flattenedPath = shape[0] * shape[1] * shape[2];
-        std::cout << "Signature: \n" << signature << '\n';
+//        std::cout << "Signature: \n" << signature << '\n';
         long flattenedPath = signature.sizes()[0] * signature.sizes()[1];
         T(*ans)
         [flattenedPath] = reinterpret_cast<T(*)[flattenedPath]>(out);
