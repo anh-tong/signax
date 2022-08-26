@@ -40,11 +40,10 @@ def mult_fused_restricted_exp(z: jnp.ndarray, A: List[jnp.ndarray]):
 
     ret = []
     for depth_index in range(depth):
-        last = 1.0
+        cur = 1.0
         for i in range(depth_index + 1):
-            current = addcmul(A[i], last, z=z / (depth_index + 1 - i))
-            last = current
-        ret.append(last)
+            cur = addcmul(A[i], cur, z=z / (depth_index + 1 - i))
+        ret.append(cur)
 
     return ret
 
@@ -52,14 +51,43 @@ def mult_fused_restricted_exp(z: jnp.ndarray, A: List[jnp.ndarray]):
 # def mult_inner(tensor_at_depth: jnp.ndarray):
 #     pass
 
-
 def addcmul(A, prev, z):
     return A + jnp.expand_dims(prev, axis=-1) * z[None, :]
 
 
 @partial(jax.jit, static_argnames="depth")
-def compute_signature(x, depth):
-    diff_x = jnp.diff(x, axis=0)
-    exp_term = restricted_exp(diff_x[0], depth=depth)
-    fused = mult_fused_restricted_exp(diff_x[1], exp_term)
-    return fused
+def compute_signature(path, depth):
+    path_increments = jnp.diff(path, axis=0)
+    exp_term = restricted_exp(path_increments[0], depth=depth)
+
+    def _body(i, val):
+        ret = mult_fused_restricted_exp(path_increments[i], val)
+        return [x.squeeze() for x in ret]
+
+    return jax.lax.fori_loop(
+        lower=1,
+        upper=path_increments.shape[0],
+        body_fun=_body,
+        init_val=exp_term,
+    )
+
+
+def mult(sig1, sig2):
+    depth = len(sig1)
+    res = sig1.copy()
+    for i in range(depth - 1, -1, -1):
+        res[i] = sig1[i]
+        for j in range(0, i):
+            res[i] += jnp.expand_dims(sig1[i - 1 - j], -2) * jnp.expand_dims(sig2[j], -1)
+        res[i] += sig2[i]
+
+    return res
+
+
+def combine_signatures(signatures):
+    out = signatures[0]
+
+    for i in range(1, len(signatures)):
+        out = mult(signatures[i], out)
+
+    return out
