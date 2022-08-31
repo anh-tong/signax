@@ -33,7 +33,7 @@ def mult_inner(
     )
 
 
-# @partial(jax.jit, static_argnums=3)
+@partial(jax.jit, static_argnums=3)
 def mult_partial(
     input1: List[jnp.ndarray],
     input2: List[jnp.ndarray],
@@ -65,9 +65,12 @@ def mult_partial(
 
 
 def log_coef_at_depth(depth: int):
-    return -1.0 if depth % 2 == 0 else 1.0
+    """Note that reciprocals is an array [1/2, 1/3, ...]"""
+    sign = -1.0 if depth % 2 == 0 else 1.0
+    return sign / (depth + 2)
 
 
+@jax.jit
 def log(input: List[jnp.ndarray]):
     """This follows Equation (10) of iisignature paper"""
 
@@ -76,14 +79,12 @@ def log(input: List[jnp.ndarray]):
         return input
 
     output = [jnp.zeros_like(x) for x in input]
-
-    output[0] = input[0] * log_coef_at_depth(depth - 2)  # TODO: reciprocal
+    output[0] = input[0] * log_coef_at_depth(depth - 2)
 
     for depth_index in reversed(range(depth - 2)):
         output = mult_partial(
             output,
             input,
-            # TODO: reciprocal
             scalar_term_value=log_coef_at_depth(depth_index),
             top_terms_to_skip=depth_index + 1,
         )
@@ -114,11 +115,22 @@ def signature_to_logsignature(
 
 if __name__ == "__main__":
 
-    n = 1000
+    import signatory
+    import torch
 
-    input1 = [jnp.ones((2,)), jnp.ones((2, 2)), jnp.ones((2, 2, 2))]
-    # input1 = [jnp.ones((2,)), jnp.ones((2, 2)), jnp.ones((2, 2, 2))]
+    dim = 3
+
+    input1 = [
+        jnp.ones((dim,)),
+        jnp.ones((dim, dim)),
+        jnp.ones((dim, dim, dim)),
+    ]
 
     output = log(input1)
-
     print(output)
+
+    signature = torch.ones((1, dim + dim * dim + dim * dim * dim))
+    log_signature = signatory.signature_to_logsignature(
+        signature=signature, depth=3, channels=dim
+    )
+    print(log_signature)
