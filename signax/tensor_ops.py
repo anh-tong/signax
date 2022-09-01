@@ -15,7 +15,13 @@ def otimes(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
     Return:
         Tensor size (n,n,...,n) with ndim=ndim_x + ndim_y
     """
-    return x[..., None] * y[None, ...]
+    expanded_y = y[None, ...]
+    if x.ndim == 1 and y.ndim > 1:
+        expanded_x = x[...,None, None]
+    else:
+        expanded_x = x[...,None]
+    return expanded_x * expanded_y
+    # return x[..., None] * y[None, ...]
 
 
 @jax.jit
