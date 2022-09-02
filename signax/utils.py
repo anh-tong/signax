@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import partial
-from typing import List
+from typing import List, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -86,26 +86,31 @@ def flatten(signature: List[jnp.ndarray]) -> jnp.ndarray:
 
 
 @partial(jax.jit, static_argnums=[0, 1])
-def _get_depth(depth: int, dim: int):
-    def _body(i, carry):
-        _start, _offset = carry
-        return _start + _offset, _offset * _offset
+def _get_depth(dim: int, depth: int) -> Tuple:
+    offset = jax.lax.integer_pow(dim, depth)
+    start = dim * (1 - offset) // (1 - dim)
 
-    start, last_offset = jax.lax.fori_loop(
-        lower=1,
-        upper=depth,
-        body_fun=_body,
-        init_val=(dim, dim),
-    )
-
-    return start, last_offset
+    return offset, start
 
 
+@partial(jax.jit, static_argnums=[1, 2, 3, 4])
 def _term_at(flattened_signature: jnp.ndarray, dim: int, term_i: int, start: int, offset: int) -> jnp.ndarray:
     return jax.lax.dynamic_slice(flattened_signature, (start,), (offset,)).reshape((term_i + 1) * (dim,))
 
 
 def term_at(flattened_signature: jnp.ndarray, dim: int, term_i: int) -> jnp.ndarray:
-    start, prev_offset = _get_depth(term_i, dim)
+    start, prev_offset = _get_depth(dim, term_i)
 
     return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+
+
+def unsqueeze_signature(signature: jnp.ndarray, dim: int, depth: int) -> List[jnp.ndarray]:
+    unsqueezed: List[jnp.ndarray] = []
+    start, offset = 0, dim
+
+    for term_i in range(depth):
+        unsqueezed.append(_term_at(signature, dim, term_i, start, offset))
+        start += offset
+        offset *= dim
+
+    return unsqueezed

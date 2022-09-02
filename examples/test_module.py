@@ -3,22 +3,39 @@ import numpy as np
 import signatory
 import torch
 
-from signax.signature import signature
-from signax.utils import flatten, term_at
+from signax.signature_flattened import signature, signature_combine
 
 np.random.seed(0)
 
 n_batch = 4
 length = 3
 dim = 2
-x = np.random.rand(n_batch, length, dim)
+x1 = np.random.rand(n_batch, length, dim)
+x2 = np.hstack((
+    x1[:, -1:, :].copy(),
+    np.random.randn(n_batch, length - 1, dim)
+))
 
 depth = 3
 
-torch_x = torch.as_tensor(x).requires_grad_(True)
+torch_x1 = torch.as_tensor(x1).requires_grad_(True)
+torch_x2 = torch.as_tensor(x2).requires_grad_(True)
 
-sig_x = jax.vmap(lambda in_: signature(in_, depth))(x)
-flattened_sig_x = jax.vmap(flatten)(sig_x)
-sig_torch_x = signatory.signature(torch_x, depth)
+sig_x = jax.vmap(lambda in_: signature(in_, depth))(x1)
 
-sig_at_1 = jax.vmap(lambda x: term_at(x, dim, 1))(flattened_sig_x)
+
+def combine_batch(path1, path2):
+    def combine(_path1, _path2):
+        return signature_combine(
+            signature(_path1, depth),
+            signature(_path2, depth),
+            dim,
+            depth)
+
+    return jax.vmap(combine)(path1, path2)
+
+
+combination = combine_batch(x1, x2)
+
+torch_combination = signatory.signature_combine(signatory.signature(torch_x1, depth),
+                                                signatory.signature(torch_x2, depth), dim, depth)

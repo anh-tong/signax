@@ -1,20 +1,26 @@
-from typing import List
-
 import equinox as eqx
 import jax.numpy as jnp
 
-from signax.signature import signature
+from signax.signature_flattened import signature, signature_combine
 
 
 class SignatureTransform(eqx.Module):
     depth: int
-    tensor_algebra: List[jnp.ndarray]
 
     def __init__(self, depth: int):
         self.depth = depth
-        self.tensor_algebra = []
 
-    def __call__(self, path) -> List[jnp.ndarray]:
-        self.tensor_algebra = signature(path, self.depth)
-        print(self.tensor_algebra)
-        return self.tensor_algebra
+    def __call__(self, path: jnp.ndarray) -> jnp.ndarray:
+        return signature(path)
+
+
+class SignatureCombine(eqx.Module):
+    dim: int
+    depth: int
+
+    def __init__(self, dim: int, depth: int):
+        self.dim = dim
+        self.depth = depth
+
+    def __call__(self, signature1: jnp.ndarray, signature2):
+        return signature_combine(signature1, signature2, self.dim, self.depth)
