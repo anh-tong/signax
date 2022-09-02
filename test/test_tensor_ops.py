@@ -107,8 +107,7 @@ def test_mult_fused_restricted_exp():
 
 def test_mult():
 
-    # TODO: fail with the case depth=4
-    depth = 3
+    depth = 4
     length, dim = 3, 4
     path = np.random.randn(length, dim)
 
@@ -135,8 +134,8 @@ def test_mult():
 
 def test_log():
     """Test log via signature_to_logsignature"""
-    depth = 2
-    length, dim = 3, 3
+    depth = 4
+    length, dim = 3, 2
     path = np.random.randn(length, dim)
     jax_path = jnp.array(path)
     jax_signature = signature(jax_path, depth)
@@ -149,14 +148,12 @@ def test_log():
         torch.tensor(path)[None, ...],
         depth,
     )
-    torch_output = (
-        signatory.signature_to_logsignature(
-            torch_signature,
-            dim,
-            depth,
-        )
-        .sum()
-        .item()
+    torch_logsignature = signatory.signature_to_logsignature(
+        torch_signature,
+        dim,
+        depth,
     )
+
+    torch_output = torch_logsignature.sum().item()
 
     assert jnp.allclose(torch_output, jax_output)

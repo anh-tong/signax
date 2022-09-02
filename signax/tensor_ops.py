@@ -15,15 +15,8 @@ def otimes(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
     Return:
         Tensor size (n,n,...,n) with ndim=ndim_x + ndim_y
     """
-    expanded_y = y[None, ...]
-    if x.ndim == 1 and y.ndim > 1:
-        # matrix multiplication broadcasting is strange
-        # since (n, 1) * (1, n, n) -> (1, n, n)
-        # therefore, (n, 1, 1) * (1, n, n) -> (n, n, n)
-        # applicable for higher dim as well
-        expanded_x = x[..., None, None]
-    else:
-        expanded_x = x[..., None]
+    expanded_x = jnp.reshape(x, x.shape + (1,) * y.ndim)
+    expanded_y = jnp.reshape(y, (1,) * x.ndim + y.shape)
     return expanded_x * expanded_y
 
 
