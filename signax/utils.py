@@ -23,7 +23,7 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     n = indices.shape[1]
     assert n <= ndim
     strides = jnp.array([dim**i for i in range(n)])
-    # flatten matrix A in F-style
+    # flatten matrix A in Fortran-style
     flattened = input.flatten("F")
 
     def _select(index):
