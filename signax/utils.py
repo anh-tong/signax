@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import partial
 from typing import List
 
 import jax
@@ -12,7 +13,7 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     This function will help compressing log-signatures
 
     Args:
-        A: size (dim, dim, ..., dim)
+        input: size (dim, dim, ..., dim)
         indices: size (dim, n)
     Return:
         A 1D jnp.ndarray
@@ -22,7 +23,7 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     ndim = input.ndim
     n = indices.shape[1]
     assert n <= ndim
-    strides = jnp.array([dim**i for i in range(n)])
+    strides = jnp.array([dim ** i for i in range(n)])
     # flatten matrix A in C-style
     flattened = input.ravel()
 
@@ -61,8 +62,8 @@ def lyndon_words(depth: int, dim: int) -> List[jnp.ndarray]:
 
 
 def compress(
-    input: List[jnp.ndarray],
-    indices: List[jnp.ndarray],
+        input: List[jnp.ndarray],
+        indices: List[jnp.ndarray],
 ) -> List[jnp.ndarray]:
     """
     Compress expanded log-signatures using Lydon words
@@ -76,3 +77,35 @@ def compress(
     """
 
     return [index_select(term, index) for term, index in zip(input, indices)]
+
+
+@jax.jit
+def flatten(signature: List[jnp.ndarray]) -> jnp.ndarray:
+    flattened_terms = tuple(map(jnp.ravel, signature))
+    return jnp.concatenate(flattened_terms)
+
+
+@partial(jax.jit, static_argnums=[0, 1])
+def _get_depth(depth: int, dim: int):
+    def _body(i, carry):
+        _start, _offset = carry
+        return _start + _offset, _offset * _offset
+
+    start, last_offset = jax.lax.fori_loop(
+        lower=1,
+        upper=depth,
+        body_fun=_body,
+        init_val=(dim, dim),
+    )
+
+    return start, last_offset
+
+
+def _term_at(flattened_signature: jnp.ndarray, dim: int, term_i: int, start: int, offset: int) -> jnp.ndarray:
+    return jax.lax.dynamic_slice(flattened_signature, (start,), (offset,)).reshape((term_i + 1) * (dim,))
+
+
+def term_at(flattened_signature: jnp.ndarray, dim: int, term_i: int) -> jnp.ndarray:
+    start, prev_offset = _get_depth(term_i, dim)
+
+    return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
