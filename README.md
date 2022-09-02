@@ -1,4 +1,6 @@
-[![CI](https://github.com/anh-tong/signatory_jax/actions/workflows/run-tests.yml/badge.svg)](https://github.com/anh-tong/signatory_jax/actions/workflows/run-tests.yml)
+# Signax: Computing signatures in JAX
+
+[![CI](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml/badge.svg)](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml)
 
 ## Goal
 
@@ -11,6 +13,15 @@ This implementation is inspired by [patrick-kidger/signatory](https://github.com
 
 <!-- TODO: example with equinox -->
 
+## Installation
+
+```
+git clone https://github.com/anh-tong/signax.git
+cd signax
+python setup.py install .
+```
+
+
 ## Parallelism 
 
 This implementation makes use of `jax.vmap` to perform the parallelism over batch dimension. 
@@ -20,6 +31,6 @@ Signatory allows dividing a path into chunks and performing asynchronous multith
 
 ## Why is using pure JAX good enough?
 
-JAX make use of just-in-time (JIT) compilations. 
+Because JAX make use of just-in-time (JIT) compilations with XLA, this implementation can be reasonably fast.
 
 We observe that the performance of this implementation is similar to Signatory in CPU and slightly better in GPU. It could be because of the optimized operators of XLA in JAX. As mentioned in the paper, signatory is not fully optimized for CUDA but relies on LibTorch.

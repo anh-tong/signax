@@ -4,7 +4,7 @@ import setuptools
 metadata = {"name": "signax", "version": "1.0", "author": "signax authors"}
 
 python_requires = "~=3.7"
-install_requires = ["jax>=0.3.10"]
+install_requires = ["jax>=0.3.10", "equinox"]
 
 setuptools.setup(
     name=metadata["name"],
