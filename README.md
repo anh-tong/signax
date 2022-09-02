@@ -1,3 +1,4 @@
+[![CI](https://github.com/anh-tong/signatory_jax/actions/workflows/run-tests.yml/badge.svg)](https://github.com/anh-tong/signatory_jax/actions/workflows/run-tests.yml)
 
 ## Goal
 

@@ -4,7 +4,7 @@ from typing import List
 import jax
 import jax.numpy as jnp
 
-from .tensor_ops import log, mult_fused_restricted_exp, restricted_exp, mult
+from .tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
 from .utils import compress, lyndon_words
 
 
@@ -44,7 +44,7 @@ def logsignature(path, depth):
 
 
 def signature_to_logsignature(
-        signature: List[jnp.ndarray],
+    signature: List[jnp.ndarray],
 ) -> List[jnp.ndarray]:
     """
     Compute logsignature from signature
