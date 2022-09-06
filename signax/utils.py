@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import List
+from functools import partial
+from typing import List, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -12,7 +13,7 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     This function will help compressing log-signatures
 
     Args:
-        A: size (dim, dim, ..., dim)
+        input: size (dim, dim, ..., dim)
         indices: size (dim, n)
     Return:
         A 1D jnp.ndarray
@@ -22,6 +23,9 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     ndim = input.ndim
     n = indices.shape[1]
     assert n <= ndim
+    strides = jnp.array([dim**i for i in range(n)])
+    # flatten matrix A in C-style
+    flattened = input.ravel()
     strides = jnp.array([dim**i for i in range(n)])
     # flatten matrix A in Fortran-style
     flattened = input.flatten("F")
@@ -76,3 +80,56 @@ def compress(
     """
 
     return [index_select(term, index) for term, index in zip(input, indices)]
+
+
+@jax.jit
+def flatten(signature: List[jnp.ndarray]) -> jnp.ndarray:
+    flattened_terms = tuple(map(jnp.ravel, signature))
+    return jnp.concatenate(flattened_terms)
+
+
+@partial(jax.jit, static_argnums=[0, 1])
+def _get_depth(dim: int, depth: int) -> Tuple:
+    offset = jax.lax.integer_pow(dim, depth)
+    start = dim * (1 - offset) // (1 - dim)
+
+    return offset, start
+
+
+@partial(jax.jit, static_argnums=[1, 2, 3, 4])
+def _term_at(
+    flattened_signature: jnp.ndarray,
+    dim: int,
+    term_i: int,
+    start: int,
+    offset: int,
+) -> jnp.ndarray:
+    return jax.lax.dynamic_slice(
+        flattened_signature,
+        (start,),
+        (offset,),
+    ).reshape((term_i + 1) * (dim,))
+
+
+def term_at(
+    flattened_signature: jnp.ndarray,
+    dim: int,
+    term_i: int,
+) -> jnp.ndarray:
+    start, prev_offset = _get_depth(dim, term_i)
+
+    return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+
+
+def unravel_signature(
+    signature: jnp.ndarray, dim: int, depth: int
+) -> List[jnp.ndarray]:
+    unraveled: List[jnp.ndarray] = []
+    start, offset = 0, dim
+
+    for term_i in range(depth):
+        unraveled.append(_term_at(signature, dim, term_i, start, offset))
+        start += offset
+        offset *= dim
+
+    return unraveled

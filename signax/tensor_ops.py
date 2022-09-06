@@ -42,10 +42,8 @@ def restricted_exp(input: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
         A list of `jnp.ndarray` contains tensors
     """
     ret = [input]
-    last = input
     for i in range(2, depth + 1):
-        last = otimes(ret[-1], input / i)
-        ret += [last]
+        ret.append(otimes(ret[-1], input / i))
     return ret
 
 
@@ -66,11 +64,10 @@ def mult_fused_restricted_exp(
     ret = []
 
     for depth_index in range(depth):
-        last = 1.0
+        current = 1.0
         for i in range(depth_index + 1):
-            current = addcmul(x=A[i], y=last, z=z / (depth_index + 1 - i))
-            last = current
-        ret.append(last)
+            current = addcmul(x=A[i], y=current, z=z / (depth_index + 1 - i))
+        ret.append(current)
 
     return ret
 
@@ -130,7 +127,7 @@ def mult_partial(
     scalar_term_value: float,
     top_terms_to_skip: int,
 ) -> List[jnp.ndarray]:
-    """Sort of multiplication in the tensor algerbra
+    """Sort of multiplication in the tensor algebra
 
     `input1` assumed scalar value
     `input2` assume scalar value zero
