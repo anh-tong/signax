@@ -15,13 +15,9 @@ def otimes(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
     Return:
         Tensor size (n,n,...,n) with ndim=ndim_x + ndim_y
     """
-    expanded_y = y[None, ...]
-    if x.ndim == 1 and y.ndim > 1:
-        expanded_x = x[...,None, None]
-    else:
-        expanded_x = x[...,None]
+    expanded_x = jnp.reshape(x, x.shape + (1,) * y.ndim)
+    expanded_y = jnp.reshape(y, (1,) * x.ndim + y.shape)
     return expanded_x * expanded_y
-    # return x[..., None] * y[None, ...]
 
 
 @jax.jit
@@ -121,7 +117,7 @@ def mult(A: List[jnp.ndarray], B: List[jnp.ndarray]) -> List[jnp.ndarray]:
 
     depth = len(A)
     C = [a + b for a, b in zip(A, B)]
-    for i in range(depth):
+    for i in range(1, depth):
         C[i] += mult_inner(A, B, depth_index=i)
 
     return C
