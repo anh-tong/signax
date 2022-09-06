@@ -1,6 +1,5 @@
 import equinox as eqx
 import jax.numpy as jnp
-
 from signax.signature_flattened import signature, signature_combine
 
 

@@ -40,7 +40,6 @@ def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
 
 
 def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
-
     length, dim = path.shape
     chunk_length = int((length - 1) / n_chunks)
     remainder = (length - 1) % n_chunks
@@ -103,7 +102,10 @@ def signature_to_logsignature(
     return log_sig
 
 
-def signature_combine(signature1: List[jnp.ndarray], signature2: List[jnp.ndarray]):
+def signature_combine(
+    signature1: List[jnp.ndarray],
+    signature2: List[jnp.ndarray],
+):
     return mult(signature1, signature2)
 
 
