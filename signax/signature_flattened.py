@@ -4,8 +4,12 @@ from typing import List
 import jax
 import jax.numpy as jnp
 
-from .signature import signature as _signature, signature_combine as _signature_combine
-from .utils import flatten, unsqueeze_signature
+from .signature import \
+    signature as _signature,\
+    signature_combine as _signature_combine,\
+    logsignature as _logsignature,\
+    signature_to_logsignature as _signature_to_logsignature
+from .utils import flatten, unravel_signature
 
 
 @partial(jax.jit, static_argnames="depth")
@@ -25,8 +29,7 @@ def signature(path: jnp.ndarray, depth: int) -> jnp.ndarray:
 
 
 def logsignature(path, depth):
-    # TODO: implement logsignature flattenning method
-    raise NotImplementedError()
+    return flatten(_logsignature(path, depth))
 
 
 def signature_to_logsignature(
@@ -45,11 +48,11 @@ def signature_to_logsignature(
         A list of `jnp.ndarray` [(dim1, ), (dim2,), (dim3,), ...]
         `dim1`, `dim2`, `dim3` are determined of how to
     """
-    # TODO: implement logsignature flattenning method
-    raise NotImplementedError()
+
+    raise flatten(_signature_to_logsignature(signature))
 
 
 def signature_combine(signature1: jnp.ndarray, signature2: jnp.ndarray, dim: int, depth: int) -> jnp.ndarray:
-    sig1 = unsqueeze_signature(signature1, dim, depth)
-    sig2 = unsqueeze_signature(signature2, dim, depth)
+    sig1 = unravel_signature(signature1, dim, depth)
+    sig2 = unravel_signature(signature2, dim, depth)
     return flatten(_signature_combine(sig1, sig2))

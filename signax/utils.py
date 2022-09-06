@@ -107,13 +107,13 @@ def term_at(flattened_signature: jnp.ndarray, dim: int, term_i: int) -> jnp.ndar
     return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
 
 
-def unsqueeze_signature(signature: jnp.ndarray, dim: int, depth: int) -> List[jnp.ndarray]:
-    unsqueezed: List[jnp.ndarray] = []
+def unravel_signature(signature: jnp.ndarray, dim: int, depth: int) -> List[jnp.ndarray]:
+    unraveled: List[jnp.ndarray] = []
     start, offset = 0, dim
 
     for term_i in range(depth):
-        unsqueezed.append(_term_at(signature, dim, term_i, start, offset))
+        unraveled.append(_term_at(signature, dim, term_i, start, offset))
         start += offset
         offset *= dim
 
-    return unsqueezed
+    return unraveled
