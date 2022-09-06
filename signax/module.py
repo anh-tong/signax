@@ -11,7 +11,7 @@ class SignatureTransform(eqx.Module):
         self.depth = depth
 
     def __call__(self, path: jnp.ndarray) -> jnp.ndarray:
-        return signature(path)
+        return signature(path, self.depth)
 
 
 class SignatureCombine(eqx.Module):
@@ -22,5 +22,5 @@ class SignatureCombine(eqx.Module):
         self.dim = dim
         self.depth = depth
 
-    def __call__(self, signature1: jnp.ndarray, signature2):
+    def __call__(self, signature1: jnp.ndarray, signature2: jnp.ndarray):
         return signature_combine(signature1, signature2, self.dim, self.depth)
