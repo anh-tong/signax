@@ -3,10 +3,24 @@ import jax.numpy as jnp
 import numpy as np
 import signatory
 import torch
-from signax.signature import multi_signature_combine, signature_batch
+from signax.signature import (  # noqa: E501
+    multi_signature_combine,
+    signature,
+    signature_batch,
+)
 
 
 jax.config.update("jax_platform_name", "cpu")
+
+
+def test_signature_1d_path():
+    depth = 3
+    length = 100
+    path = np.random.randn(length, 1)
+    signature(path, depth)
+
+    path = np.random.randn(length)
+    signature(path, depth)
 
 
 def test_multi_signature_combine():
