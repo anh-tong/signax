@@ -26,7 +26,6 @@ def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
 
     def _body(i, val):
         ret = mult_fused_restricted_exp(path_increments[i], val)
-        ret = [x.squeeze() for x in ret]
         return ret
 
     exp_term = jax.lax.fori_loop(

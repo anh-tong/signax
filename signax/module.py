@@ -1,3 +1,5 @@
+from typing import Optional
+
 import equinox as eqx
 import jax.numpy as jnp
 from signax.signature_flattened import signature, signature_combine
@@ -9,7 +11,12 @@ class SignatureTransform(eqx.Module):
     def __init__(self, depth: int):
         self.depth = depth
 
-    def __call__(self, path: jnp.ndarray) -> jnp.ndarray:
+    def __call__(
+        self,
+        path: jnp.ndarray,
+        *,
+        key: Optional["jax.random.PRNGKey"] = None,  # noqa: F821
+    ) -> jnp.ndarray:
         return signature(path, self.depth)
 
 
