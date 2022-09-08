@@ -27,7 +27,7 @@ length = 100
 dim = 20
 path = jrandom.normal(shape=(length, dim), key=key)
 output = signature(path, depth)
-# output is a list of array presenting tensor algebra
+# output is a list of array representing tensor algebra
 
 # compute signature for batches (multiple) of paths
 # this is done via `jax.vmap`
@@ -79,8 +79,36 @@ python setup.py install .
 
 This implementation makes use of `jax.vmap` to perform the parallelism over batch dimension. 
 
-Signatory allows dividing a path into chunks and performing asynchronous multithread computation over chunks. 
-<!-- TODO: This implementation allow perform  -->
+Paralelism over chunks of paths is done using `jax.vmap` as well. 
+
+A quick comparison can be found at in the notebook `examples/compare.ipynb`. Below plots are comparison of forward and backward pass in both GPU and CPU for path `size=(32, 128, 8)` and signature `depth=5`
+
+<table>
+<thead>
+  <tr>
+    <th >Forward</th>
+    <th > Backward</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>
+        <img width="300" height="170" src="./assets/forward_gpu.png">
+    </td>
+    <td>
+        <img width="300" height="170" src="./assets/backward_gpu.png">
+    </td>
+  </tr>
+  <tr>
+    <td>
+        <img width="300" height="170" src="./assets/forward_cpu.png">
+    </td>
+    <td>
+        <img width="300" height="170" src="./assets/backward_cpu.png">
+    </td>
+  </tr>
+</tbody>
+</table>
 
 ## Why is using pure JAX good enough?
 
