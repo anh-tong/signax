@@ -79,9 +79,9 @@ python setup.py install .
 
 This implementation makes use of `jax.vmap` to perform the parallelism over batch dimension. 
 
-Signatory allows dividing a path into chunks and performing asynchronous multithread computation over chunks. 
+Paralelism over chunks of paths is done using `jax.vmap` as well. 
 
-A quick comparison can be found at in the notebook `examples/compare.ipynb`. Below plots are a 
+A quick comparison can be found at in the notebook `examples/compare.ipynb`. Below plots are comparison of forward and backward pass in both GPU and CPU for path `size=(32, 128, 8)` and signature `depth=5`
 
 <table>
 <thead>
@@ -93,18 +93,18 @@ A quick comparison can be found at in the notebook `examples/compare.ipynb`. Bel
 <tbody>
   <tr>
     <td>
-        <img width="300" height="125" src="./assets/forward_gpu.png">
+        <img width="300" height="170" src="./assets/forward_gpu.png">
     </td>
     <td>
-        <img width="300" height="125" src="./assets/backward_gpu.png">
+        <img width="300" height="170" src="./assets/backward_gpu.png">
     </td>
   </tr>
   <tr>
     <td>
-        <img width="300" height="125" src="./assets/forward_cpu.png">
+        <img width="300" height="170" src="./assets/forward_cpu.png">
     </td>
     <td>
-        <img width="300" height="125" src="./assets/backward_cpu.png">
+        <img width="300" height="170" src="./assets/backward_cpu.png">
     </td>
   </tr>
 </tbody>
