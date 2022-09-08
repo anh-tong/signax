@@ -93,18 +93,18 @@ A quick comparison can be found at in the notebook `examples/compare.ipynb`. Bel
 <tbody>
   <tr>
     <td>
-        <img width="600" height="450" src="./assets/forward_gpu.png">
+        <img width="200" height="100" src="./assets/forward_gpu.png">
     </td>
     <td>
-        <img width="600" height="450" src="./assets/backward_gpu.png">
+        <img width="200" height="100" src="./assets/backward_gpu.png">
     </td>
   </tr>
   <tr>
     <td>
-        <img width="600" height="450" src="./assets/forward_cpu.png">
+        <img width="200" height="100" src="./assets/forward_cpu.png">
     </td>
     <td>
-        <img width="600" height="450" src="./assets/backward_cpu.png">
+        <img width="200" height="100" src="./assets/backward_cpu.png">
     </td>
   </tr>
 </tbody>
