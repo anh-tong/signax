@@ -28,5 +28,5 @@ jobs:
       # if: github.event_name == 'push' && startsWith(github.ref, 'refs/v')
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
-        user: anh-tong
+        user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
