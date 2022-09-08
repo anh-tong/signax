@@ -10,6 +10,8 @@ metadata = {"name": "signax", "version": "0.1.0", "author": "signax authors"}
 python_requires = "~=3.7"
 install_requires = ["jax>=0.3.10", "equinox"]
 
+license = "MIT"
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -39,6 +41,7 @@ setuptools.setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     url=url,
+    license=license,
     classifiers=classifiers,
     zip_safe=False,
     python_requires=python_requires,
