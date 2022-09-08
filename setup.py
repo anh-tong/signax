@@ -5,7 +5,12 @@ import setuptools
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-metadata = {"name": "signax", "version": "0.1.0", "author": "signax authors"}
+metadata = {
+    "name": "signax",
+    "version": "0.1.0",
+    "author": "signax authors",
+    "author_email": "anh.h.tong@gmail.com",
+}
 
 python_requires = "~=3.7"
 install_requires = ["jax>=0.3.10", "equinox"]
@@ -36,6 +41,7 @@ setuptools.setup(
     name=metadata["name"],
     version=metadata["version"],
     author=metadata["author"],
+    author_email=metadata["author_email"],
     maintainer=metadata["author"],
     description=description,
     long_description=readme,
