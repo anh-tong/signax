@@ -1,6 +1,7 @@
 # Signax: Computing signatures in JAX
 
 [![CI](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml/badge.svg)](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml)
+![PyPI version](https://img.shields.io/pypi/v/signax)
 
 ## Goal
 
@@ -68,6 +69,12 @@ output = model(x)
 Also, check notebooks in `examples` folder for some experiments of [deep signature transforms paper](https://arxiv.org/abs/1905.08494).
 ## Installation
 
+Via pip
+```
+pip install signax
+```
+
+Via source
 ```
 git clone https://github.com/anh-tong/signax.git
 cd signax
@@ -112,9 +119,9 @@ A quick comparison can be found at in the notebook `examples/compare.ipynb`. Bel
 
 ## Why is using pure JAX good enough?
 
-Because JAX make use of just-in-time (JIT) compilations with XLA, this implementation can be reasonably fast.
+Because JAX make use of just-in-time (JIT) compilations with XLA, Signax can be reasonably fast. 
 
-We observe that the performance of this implementation is similar to Signatory in CPU and slightly better in GPU. It could be because of the optimized operators of XLA in JAX. As mentioned in the paper, signatory is not fully optimized for CUDA but relies on LibTorch.
+We observe that the performance of this implementation is similar to Signatory in CPU and slightly better in GPU. It could be because of the optimized operators of XLA in JAX. Note that [Signatory](https://github.com/patrick-kidger/signatory) contains highly optimized C++ source code (PyTorch with Pybind11).
 
 ## Acknowledgement
 
