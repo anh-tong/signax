@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 from signax.module import SignatureTransform
-from signax.signature import signature
+from signax.signature import signature, signature_combine
 from signax.utils import flatten
 
 
@@ -144,6 +144,42 @@ class Window(eqx.Module):
         output = jax.vmap(_signature)(output)
 
         return output
+
+
+class WindowAdjusted(eqx.Module):
+    length: int
+    adjusted_length: int
+    signature_depth: int
+
+    def __init__(self, length, adjusted_length, signature_depth=2) -> None:
+        assert adjusted_length > 0
+        self.length = length
+        self.adjusted_length = adjusted_length
+        self.signature_depth = signature_depth
+
+    def __call__(self, x, *, key=None):
+        """x size: (path_len, dim)"""
+        path_length, dim = x.shape[0], x.shape[1]
+
+        # this can miss the last index
+        index = jnp.arange(
+            start=self.length, stop=path_length, step=self.adjusted_length
+        )
+        init = signature(x[: self.length], self.signature_depth)
+
+        def f(carry, i):
+            current_x = jax.lax.dynamic_slice(
+                x,
+                start_indices=(i - 1, 0),
+                slice_sizes=(self.adjusted_length + 1, dim),
+            )
+            sig = signature(current_x, self.signature_depth)
+            out = signature_combine(carry, sig)
+            return out, flatten(out)
+
+        _, ret = jax.lax.scan(f, init=init, xs=index)
+
+        return ret
 
 
 class RecurrentNet(eqx.Module):
@@ -339,7 +375,7 @@ def create_generative_net(dim, *, key):
         kernel_size=1,
     )
 
-    layers = (augment_in, Window(1, 2, 3), augment_out)
+    layers = (augment_in, WindowAdjusted(2, 1, 3), augment_out)
     return eqx.nn.Sequential(layers)
 
 

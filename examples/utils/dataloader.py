@@ -8,8 +8,7 @@ class DataLoader:
     def __init__(
         self, data: Sequence[jnp.ndarray], batch_size: int = 1, random_key=None
     ):
-        self.dataset_size = data[0].shape[0]
-        assert all(datum.shape[0] == self.dataset_size for datum in data)
+        self.dataset_size = len(data)
 
         self.data = data
         self.batch_size = batch_size
@@ -35,11 +34,11 @@ class DataLoaderIterator:
     def __next__(self):
         end = self.cur_index + self.dataloader.batch_size
         if end > self.dataloader.dataset_size:
-            raise StopIteration()
+            raise StopIteration
         start = self.cur_index
         indices = self.indices[start:end]
-        result = (datum[indices] for datum in self.dataloader.data)
+        result = self.dataloader.data[indices]
 
-        self.cur_index += 1
+        self.cur_index = end + 1
 
         return result
