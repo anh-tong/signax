@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 from signax.module import SignatureTransform
-from signax.signature import signature
+from signax.signature import signature, signature_combine
 from signax.utils import flatten
 
 
@@ -34,7 +34,6 @@ def _make_convs(input_size: int, layer_sizes, kernel_size, *, key):
 
 
 class Augment(eqx.nn.Sequential):
-
     """A stack of Conv1D, first Conv1D has kernel_size as input
     The remaining Conv1D has kernel_size = 1
 
@@ -134,6 +133,7 @@ class Window(eqx.Module):
             )
 
         _, output = jax.lax.scan(f=_f, init=None, xs=index)
+
         # output is a tensor algebra which is a list of `jnp.ndarray`
         # size of output: [(n, dim), (n, dim, dim,), (n, dim, dim, dim), ...]
 
@@ -144,6 +144,42 @@ class Window(eqx.Module):
         output = jax.vmap(_signature)(output)
 
         return output
+
+
+class WindowAdjusted(eqx.Module):
+    length: int
+    adjusted_length: int
+    signature_depth: int
+
+    def __init__(self, length, adjusted_length, signature_depth=2) -> None:
+        assert adjusted_length > 0
+        self.length = length
+        self.adjusted_length = adjusted_length
+        self.signature_depth = signature_depth
+
+    def __call__(self, x, *, key=None):
+        """x size: (path_len, dim)"""
+        path_length, dim = x.shape[0], x.shape[1]
+
+        # this can miss the last index
+        index = jnp.arange(
+            start=self.length, stop=path_length, step=self.adjusted_length
+        )
+        init = signature(x[: self.length], self.signature_depth)
+
+        def f(carry, i):
+            current_x = jax.lax.dynamic_slice(
+                x,
+                start_indices=(i - 1, 0),
+                slice_sizes=(self.adjusted_length + 1, dim),
+            )
+            sig = signature(current_x, self.signature_depth)
+            out = signature_combine(carry, sig)
+            return out, flatten(out)
+
+        _, ret = jax.lax.scan(f, init=init, xs=index)
+
+        return ret
 
 
 class RecurrentNet(eqx.Module):
@@ -168,7 +204,6 @@ class RecurrentNet(eqx.Module):
         *,
         key,
     ):
-
         self.mlp = eqx.nn.MLP(
             in_size=input_size + memory_size,
             width_size=hidden_size,
@@ -278,7 +313,6 @@ def create_deep_recurrence(
     *,
     key,
 ):
-
     layers = []
     current_n_channels = dim
     zipped = zip(lengths, strides, memory_sizes, output_sizes)
@@ -313,8 +347,39 @@ def create_deep_recurrence(
     return model
 
 
-if __name__ == "__main__":
+def create_generative_net(dim, *, key):
+    augment_in_key, augment_out_key = jrandom.split(key, num=2)
+    convs_in = _make_convs(
+        input_size=dim,
+        layer_sizes=(8, 8, 2),
+        kernel_size=1,
+        key=augment_in_key,
+    )
+    augment_in = Augment(
+        layers=convs_in,
+        include_original=True,
+        include_time=False,
+        kernel_size=1,
+    )
 
+    convs_out = _make_convs(
+        input_size=84,
+        layer_sizes=(1,),
+        kernel_size=1,
+        key=augment_out_key,
+    )
+    augment_out = Augment(
+        layers=convs_out,
+        include_original=False,
+        include_time=False,
+        kernel_size=1,
+    )
+
+    layers = (augment_in, WindowAdjusted(2, 1, 3), augment_out)
+    return eqx.nn.Sequential(layers)
+
+
+if __name__ == "__main__":
     jax.config.update("jax_platform_name", "cpu")
     key = jrandom.PRNGKey(0)
     model = create_simple_net(dim=2, key=key)
