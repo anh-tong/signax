@@ -25,7 +25,7 @@ def test_otimes():
     y = jnp.array([3.0, 4.0])
 
     true_output = jnp.array([[3.0, 4.0], [6.0, 8.0]])
-    assert jnp.allclose(true_output, otimes(x, y))
+    assert jnp.allclose(true_output, otimes(x, y), rtol=1e-3, atol=1e-5)
 
     # 1D x 2D
     x = jnp.array([1.0, 2.0])
@@ -36,7 +36,7 @@ def test_otimes():
             [[6.0, 8.0], [10.0, 12.0]],
         ]
     )
-    assert jnp.allclose(true_output, otimes(x, y))
+    assert jnp.allclose(true_output, otimes(x, y), rtol=1e-3, atol=1e-5)
 
     # 2D x 1D
     true_output = jnp.array(
@@ -46,7 +46,7 @@ def test_otimes():
         ]
     )
 
-    assert jnp.allclose(true_output, otimes(y, x))
+    assert jnp.allclose(true_output, otimes(y, x), rtol=1e-3, atol=1e-5)
 
 
 def test_addcmul():
@@ -55,7 +55,7 @@ def test_addcmul():
     y = jnp.array([1.0, 2.0])
     z = jnp.array([3.0, 4.0])
     true_output = jnp.array([[4.0, 6.0], [9.0, 12.0]])
-    assert jnp.allclose(true_output, addcmul(x, y, z))
+    assert jnp.allclose(true_output, addcmul(x, y, z), rtol=1e-3, atol=1e-5)
 
 
 def test_restricted_exp():
@@ -75,7 +75,7 @@ def test_restricted_exp():
     jax_output = restricted_exp(jnp.diff(path, axis=0), depth=depth)
     jax_output = sum([jnp.sum(x) for x in jax_output])
     # only check the sum of output in two cases are the same
-    assert jnp.allclose(signatory_output, jax_output)
+    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
 
 
 def test_mult_fused_restricted_exp():
@@ -102,7 +102,7 @@ def test_mult_fused_restricted_exp():
     jax_output = mult_fused_restricted_exp(increments[1], exp_term)
     jax_output = sum([jnp.sum(x) for x in jax_output])
     # again, just check the sum
-    assert jnp.allclose(signatory_output, jax_output)
+    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
 
 
 def test_mult():
@@ -129,7 +129,7 @@ def test_mult():
     signatory_output = signatory.signature_combine(exp2, exp1, dim, depth)
     signatory_output = signatory_output.sum().item()
 
-    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3)
+    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
 
 
 def test_log():
@@ -156,4 +156,4 @@ def test_log():
 
     torch_output = torch_logsignature.sum().item()
 
-    assert jnp.allclose(torch_output, jax_output)
+    assert jnp.allclose(torch_output, jax_output, rtol=1e-3, atol=1e-5)
