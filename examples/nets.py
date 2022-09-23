@@ -10,6 +10,11 @@ from signax.utils import flatten
 
 
 def _make_convs(input_size: int, layer_sizes, kernel_size, *, key):
+    """Make a stack of Conv1d:
+
+    The first layer has kernel size = `kernel_size`.
+    The remaining layers has kernel size = 1
+    """
     keys = jrandom.split(key, num=len(layer_sizes))
     convs = []
 
@@ -152,22 +157,51 @@ class WindowAdjusted(eqx.Module):
     signature_depth: int
 
     def __init__(self, length, adjusted_length, signature_depth=2) -> None:
+        # this make sure that windows will be expanded
         assert adjusted_length > 0
         self.length = length
         self.adjusted_length = adjusted_length
         self.signature_depth = signature_depth
 
     def __call__(self, x, *, key=None):
-        """x size: (path_len, dim)"""
+        """
+        Transform input `x` into a smaller window.
+        Each window starts at index 0 with increasing size according
+        to `adjusted_length`.
+
+        Then, signature transform will be applied onto each window.
+        The signature will be gathered in the output.
+
+        The following implementation makes use of `jax.lax.scan` to gather
+        signature. The internal use `signature_combine` as windows share
+        the same prefix.
+
+        Example:
+            length, adjusted_length = 2, 1
+            x = [1, 2, 3, 4, 5]
+            out = [sig([1,2]), sig([1,2,3]), sig([1,2,3,4]),
+            sig([1,2,3,4,5])]
+        Args:
+            x: size (path_length, dim)
+        """
         path_length, dim = x.shape[0], x.shape[1]
 
         # this can miss the last index
         index = jnp.arange(
-            start=self.length, stop=path_length, step=self.adjusted_length
+            start=self.length,
+            stop=path_length,
+            step=self.adjusted_length,
         )
+
+        # signature of the first window
         init = signature(x[: self.length], self.signature_depth)
 
         def f(carry, i):
+            """
+            Args:
+                carry: signature of previous windows
+                i : current index
+            """
             current_x = jax.lax.dynamic_slice(
                 x,
                 start_indices=(i - 1, 0),
@@ -175,10 +209,34 @@ class WindowAdjusted(eqx.Module):
             )
             sig = signature(current_x, self.signature_depth)
             out = signature_combine(carry, sig)
+
+            # carry the current signature to the next iteration
             return out, flatten(out)
 
-        _, ret = jax.lax.scan(f, init=init, xs=index)
+        # scan
+        carry, ret = jax.lax.scan(f, init=init, xs=index[:-1])
 
+        # compute signature of the last window
+        if (path_length - self.length) % self.adjusted_length == 0:
+            n_expand = (path_length - self.length) // self.adjusted_length - 1
+        else:
+            n_expand = (path_length - self.length) // self.adjusted_length
+
+        last_index = self.length - 1 + n_expand * self.adjusted_length
+        last = signature(x[last_index:], self.signature_depth)
+        last = signature_combine(carry, last)
+        last = flatten(last)
+
+        begin = flatten(init)
+        # add the begining and the last signature
+        ret = jnp.concatenate(
+            [
+                begin[None, ...],
+                ret,
+                last[None, ...],
+            ],
+            axis=0,
+        )
         return ret
 
 
@@ -239,11 +297,6 @@ class RecurrentNet(eqx.Module):
 
         _, output = jax.lax.scan(f, memory, input)
         return output
-
-
-class Sigmoid(eqx.Module):
-    def __call__(self, x, *, key):
-        return jax.nn.sigmoid(x)
 
 
 def signature_dim(n_channels, depth):
@@ -341,7 +394,8 @@ def create_deep_recurrence(
         current_n_channels = output_size
 
         if i == len(lengths) - 1:
-            layers.append(Sigmoid())
+            # sigmoid activation at the last layer
+            layers.append(eqx.nn.Lambda(jax.nn.sigmoid))
 
     model = eqx.nn.Sequential(layers)
     return model
@@ -379,10 +433,17 @@ def create_generative_net(dim, *, key):
     return eqx.nn.Sequential(layers)
 
 
-if __name__ == "__main__":
-    jax.config.update("jax_platform_name", "cpu")
-    key = jrandom.PRNGKey(0)
-    model = create_simple_net(dim=2, key=key)
+# if __name__ == "__main__":
 
-    x = jnp.ones((100, 2))
-    output = model(x)
+#     # make a little test for WindowAdjusted
+#     length, dim = 10, 2
+#     signature_depth = 3
+#     window = WindowAdjusted(length=2,
+#                             adjusted_length=1,
+#                             signature_depth=signature_depth,)
+
+#     x = jrandom.normal(key=jrandom.PRNGKey(0), shape=(length, dim))
+#     result = window(x)
+#     signature_last = result[-1]
+#     expect = flatten(signature(x, signature_depth))
+#     assert jnp.allclose(signature_last, expect)

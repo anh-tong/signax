@@ -2,7 +2,10 @@ import jax
 from jax import numpy as jnp
 
 
-def scalar_orders(dim, order):
+def scalar_orders(
+    dim: int,
+    order: int,
+):
     """The order of the scalar basis elements
     as one moves along the signature."""
 
