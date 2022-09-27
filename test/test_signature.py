@@ -24,7 +24,7 @@ def test_signature_1d_path():
 
 
 def test_multi_signature_combine():
-    batch_size = 10
+    batch_size = 5
     dim = 5
     signatures = [
         np.random.randn(batch_size, dim),
@@ -48,23 +48,38 @@ def test_multi_signature_combine():
         torch_signatures, input_channels=dim, depth=len(signatures)
     )
     torch_sum = torch_output.sum().item()
-    assert jnp.allclose(jax_sum, torch_sum)
+    assert jnp.allclose(jax_sum, torch_sum, rtol=1e-2, atol=1e-1)
 
 
 def test_signature_batch():
-    # TODO: not complete yet
-    # no remainder case
     depth = 3
 
+    # no remainder case
     length = 1001
     dim = 100
     n_chunks = 10
-    path = np.random.randn(length, dim)
 
-    signature_batch(path, depth, n_chunks)
+    path = np.random.randn(length, dim)
+    jax_signature = signature_batch(path, depth, n_chunks)
+    jax_sum = sum(jnp.sum(x) for x in jax_signature)
+
+    torch_path = torch.tensor(path)
+    torch_signature = signatory.signature(torch_path[None, ...], depth=depth)
+    torch_sum = torch_signature.sum().item()
+
+    # TODO: this has a low precision error
+    assert jnp.allclose(jax_sum, torch_sum, rtol=1e-2, atol=1e-1)
 
     # has remainder case
     length = 1005
     path = np.random.randn(length, dim)
 
-    signature_batch(path, depth, n_chunks)
+    jax_signature = signature_batch(path, depth, n_chunks)
+    jax_sum = sum(jnp.sum(x) for x in jax_signature)
+
+    torch_path = torch.tensor(path)
+    torch_signature = signatory.signature(torch_path[None, ...], depth=depth)
+    torch_sum = torch_signature.sum().item()
+
+    # TODO: this has a low precision error
+    assert jnp.allclose(jax_sum, torch_sum, rtol=1e-2, atol=1e-1)

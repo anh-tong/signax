@@ -38,7 +38,20 @@ def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
     return exp_term
 
 
+@partial(jax.jit, static_argnames=["depth", "n_chunks"])
 def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
+    """Compute signature for a long path
+
+    The path will be divided into chunks. The numbers of chunks
+    is set manually.
+
+    Args:
+        path: size (length, dim)
+        depth: signature depth
+        n_chunks:
+    Returns:
+        signature in a form of [(n,), (n,n), ...]
+    """
     length, dim = path.shape
     chunk_length = int((length - 1) / n_chunks)
     remainder = (length - 1) % n_chunks
@@ -49,7 +62,7 @@ def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
     basepoints = jnp.roll(path_bulk[:, -1], shift=1, axis=0)
     basepoints = basepoints.at[0].set(path[0])
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
-    path_remainder = path[bulk_length:]
+    path_remainder = path[bulk_length - 1 :]  # noqa
 
     def _signature(path):
         return signature(path, depth)
@@ -121,16 +134,11 @@ def multi_signature_combine(signatures: List[jnp.ndarray]):
     Returns:
         size [(n,), (n, n), (n, n, n), ...]
     """
-    batch_size = signatures[0].shape[0]
-
-    init_val = [x[0] for x in signatures]
-
-    def _body_fn(i, val):
-        current = [x[i] for x in signatures]
-        ret = mult(val, current)
-        return ret
-
-    combined = jax.lax.fori_loop(
-        lower=1, upper=batch_size, body_fun=_body_fn, init_val=init_val
+    result = jax.lax.associative_scan(
+        fn=jax.vmap(signature_combine),
+        elems=signatures,
     )
-    return combined
+    # return the last index after associative scan
+    result = jax.tree_map(lambda x: x[-1], result)
+
+    return result
