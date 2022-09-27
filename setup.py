@@ -1,13 +1,25 @@
 import pathlib
+import re
 
 import setuptools
 
 
 HERE = pathlib.Path(__file__).resolve().parent
 
+with open(HERE / "signax" / "__init__.py") as f:
+    meta_match = re.search(
+        r"^__version__ = ['\"]([^'\"]*)['\"]",
+        f.read(),
+        re.M,
+    )
+    if meta_match:
+        version = meta_match.group(1)
+    else:
+        raise RuntimeError("Unable to find __version__ string.")
+
 metadata = {
     "name": "signax",
-    "version": "0.1.0",
+    "version": version,
     "author": "signax authors",
     "author_email": "anh.h.tong@gmail.com",
 }
