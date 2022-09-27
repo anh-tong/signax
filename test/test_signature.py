@@ -48,7 +48,7 @@ def test_multi_signature_combine():
         torch_signatures, input_channels=dim, depth=len(signatures)
     )
     torch_sum = torch_output.sum().item()
-    assert jnp.allclose(jax_sum, torch_sum)
+    assert jnp.allclose(jax_sum, torch_sum, rtol=1e-2, atol=1e-1)
 
 
 def test_signature_batch():
