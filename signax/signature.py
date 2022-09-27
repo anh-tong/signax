@@ -38,6 +38,7 @@ def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
     return exp_term
 
 
+@partial(jax.jit, static_argnames=["depth", "n_chunks"])
 def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
     """Compute signature for a long path
 
