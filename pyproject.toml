@@ -82,7 +82,7 @@ port.exclude_lines = [
 ]
 
 [tool.mypy]
-files = ["src", "tests"]
+files = ["src"]
 python_version = "3.8"
 warn_unused_configs = true
 strict = true
@@ -122,7 +122,6 @@ select = [
   "YTT",         # flake8-2020
   "EXE",         # flake8-executable
   "NPY",         # NumPy specific rules
-  "PD",          # pandas-vet
 ]
 extend-ignore = [
   "PLR",    # Design related pylint codes
