@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import equinox as eqx
 import jax
-import jax.numpy as jnp
 
 from signax.signature_flattened import signature, signature_combine
 
@@ -16,9 +15,7 @@ class SignatureTransform(eqx.Module):
     def __call__(
         self,
         path: jax.Array,
-        *,
-        key: jax.random.PRNGKey | None = None,
-    ) -> jnp.ndarray:
+    ) -> jax.Array:
         return signature(path, self.depth)
 
 

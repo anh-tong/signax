@@ -29,7 +29,7 @@ def index_select(input: jax.Array, indices: jax.Array) -> jax.Array:
     flattened = input.ravel()
     strides = jnp.array([dim**i for i in range(n)])
     # flatten matrix A in Fortran-style
-    flattened = input.flatten("F")
+    flattened = input.ravel("F")
 
     def _select(index):
         """index is a `jnp.ndarray` int"""
@@ -90,7 +90,7 @@ def flatten(signature: list[jax.Array]) -> jax.Array:
 
 
 @partial(jax.jit, static_argnums=[0, 1])
-def _get_depth(dim: int, depth: int) -> tuple:
+def _get_depth(dim: int, depth: int) -> tuple[jax.Array, jax.Array]:
     offset = jax.lax.integer_pow(dim, depth)
     start = dim * (1 - offset) // (1 - dim)
 

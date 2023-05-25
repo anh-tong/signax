@@ -22,7 +22,7 @@ def otimes(x: jax.Array, y: jax.Array) -> jax.Array:
 
 
 @jax.jit
-def addcmul(x: jax.Array, y: jax.Array, z: jax.Array):
+def addcmul(x: jax.Array, y: jax.Array, z: jax.Array) -> jax.Array:
     """Similar to `torch.addcmul` returning
         x + y * z
     Here `*` is the tensor product
@@ -63,7 +63,7 @@ def mult_fused_restricted_exp(z: jax.Array, A: list[jax.Array]) -> list[jax.Arra
     ret = []
 
     for depth_index in range(depth):
-        current = 1.0
+        current = jnp.array(1.0)
         for i in range(depth_index + 1):
             current = addcmul(x=A[i], y=current, z=z / (depth_index + 1 - i))
         ret.append(current)
