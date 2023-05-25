@@ -1,7 +1,19 @@
 # Signax: Computing signatures in JAX
 
-[![CI](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml/badge.svg)](https://github.com/anh-tong/signax/actions/workflows/run-tests.yml)
-![PyPI version](https://img.shields.io/pypi/v/signax)
+[![Actions Status][actions-badge]][actions-link]
+[![Documentation Status][rtd-badge]][rtd-link]
+[![PyPI version][pypi-version]][pypi-link]
+[![PyPI platforms][pypi-platforms]][pypi-link]
+
+<!-- prettier-ignore-start -->
+[actions-badge]:            https://github.com/Anh-Tong/signax/workflows/CI/badge.svg
+[actions-link]:             https://github.com/Anh-Tong/signax/actions
+[pypi-link]:                https://pypi.org/project/signax/
+[pypi-platforms]:           https://img.shields.io/pypi/pyversions/signax
+[pypi-version]:             https://img.shields.io/pypi/v/signax
+[rtd-badge]:                https://readthedocs.org/projects/signax/badge/?version=latest
+[rtd-link]:                 https://signax.readthedocs.io/en/latest/?badge=latest
+<!-- prettier-ignore-end -->
 
 ## Goal
 
