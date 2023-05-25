@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 from functools import partial
 
 import jax
-import jax.numpy as jnp
 
 from .signature import logsignature as _logsignature
 from .signature import signature as _signature
@@ -11,7 +12,7 @@ from .utils import flatten, unravel_signature
 
 
 @partial(jax.jit, static_argnames="depth")
-def signature(path: jnp.ndarray, depth: int) -> jnp.ndarray:
+def signature(path: jax.Array, depth: int) -> jax.Array:
     """
     Compute the signature of a path
 
@@ -30,9 +31,7 @@ def logsignature(path, depth):
     return flatten(_logsignature(path, depth))
 
 
-def signature_to_logsignature(
-    signature: jnp.ndarray, dim: int, depth: int
-) -> jnp.ndarray:
+def signature_to_logsignature(signature: jax.Array, dim: int, depth: int) -> jax.Array:
     """
     Compute logsignature from signature
 
@@ -52,8 +51,8 @@ def signature_to_logsignature(
 
 
 def signature_combine(
-    signature1: jnp.ndarray, signature2: jnp.ndarray, dim: int, depth: int
-) -> jnp.ndarray:
+    signature1: jax.Array, signature2: jax.Array, dim: int, depth: int
+) -> jax.Array:
     sig1 = unravel_signature(signature1, dim, depth)
     sig2 = unravel_signature(signature2, dim, depth)
     return flatten(_signature_combine(sig1, sig2))

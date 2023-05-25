@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 from functools import partial
-from typing import List
 
 import jax
 import jax.numpy as jnp
 
 
 @jax.jit
-def otimes(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
+def otimes(x: jax.Array, y: jax.Array) -> jax.Array:
     """Tensor product
 
     Args:
@@ -21,7 +22,7 @@ def otimes(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
 
 
 @jax.jit
-def addcmul(x: jnp.ndarray, y: jnp.ndarray, z: jnp.ndarray):
+def addcmul(x: jax.Array, y: jax.Array, z: jax.Array):
     """Similar to `torch.addcmul` returning
         x + y * z
     Here `*` is the tensor product
@@ -30,7 +31,7 @@ def addcmul(x: jnp.ndarray, y: jnp.ndarray, z: jnp.ndarray):
 
 
 @partial(jax.jit, static_argnames="depth")
-def restricted_exp(input: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
+def restricted_exp(input: jax.Array, depth: int) -> list[jax.Array]:
     """Restricted exponentiate
 
     As `depth` is fixed so we can make it as a static argument.
@@ -48,9 +49,7 @@ def restricted_exp(input: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
 
 
 @jax.jit
-def mult_fused_restricted_exp(
-    z: jnp.ndarray, A: List[jnp.ndarray]
-) -> List[jnp.ndarray]:
+def mult_fused_restricted_exp(z: jax.Array, A: list[jax.Array]) -> list[jax.Array]:
     """
     Multiply-fused-exponentiate
 
@@ -74,10 +73,10 @@ def mult_fused_restricted_exp(
 
 @partial(jax.jit, static_argnums=2)
 def mult_inner(
-    A: List[jnp.ndarray],
-    B: List[jnp.ndarray],
+    A: list[jax.Array],
+    B: list[jax.Array],
     depth_index: int,
-) -> List[jnp.ndarray]:
+) -> list[jax.Array]:
     """
     Let `depth_index` = n
 
@@ -103,7 +102,7 @@ def mult_inner(
 
 
 @jax.jit
-def mult(A: List[jnp.ndarray], B: List[jnp.ndarray]) -> List[jnp.ndarray]:
+def mult(A: list[jax.Array], B: list[jax.Array]) -> list[jax.Array]:
     """
     Multiplication in tensor algebra
 
@@ -122,11 +121,11 @@ def mult(A: List[jnp.ndarray], B: List[jnp.ndarray]) -> List[jnp.ndarray]:
 
 @partial(jax.jit, static_argnums=3)
 def mult_partial(
-    input1: List[jnp.ndarray],
-    input2: List[jnp.ndarray],
+    input1: list[jax.Array],
+    input2: list[jax.Array],
     scalar_term_value: float,
     top_terms_to_skip: int,
-) -> List[jnp.ndarray]:
+) -> list[jax.Array]:
     """Sort of multiplication in the tensor algebra
 
     `input1` assumed scalar value
@@ -157,7 +156,7 @@ def _log_coef_at_depth(depth: int) -> float:
 
 
 @jax.jit
-def log(input: List[jnp.ndarray]) -> List[jnp.ndarray]:
+def log(input: list[jax.Array]) -> list[jax.Array]:
     """This follows Equation (10) of iisignature paper"""
 
     depth = len(input)

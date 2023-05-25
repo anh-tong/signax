@@ -1,9 +1,12 @@
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Callable
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
+
 from signax.module import SignatureTransform
 from signax.signature import signature, signature_combine
 from signax.utils import flatten
@@ -68,7 +71,7 @@ class Augment(eqx.nn.Sequential):
         self,
         x: jnp.ndarray,
         *,
-        key: Optional["jax.random.PRNGKey"] = None,
+        key: jax.random.PRNGKey | None = None,
     ):
         """x size (length, dim)"""
         length, _ = x.shape
@@ -281,7 +284,7 @@ class RecurrentNet(eqx.Module):
         Returns:
             output: size (seq_lenth, dim)
         """
-        memory = jnp.zeros((self.memory_size))
+        memory = jnp.zeros(self.memory_size)
 
         def f(carry, inp):
             # carry = memory

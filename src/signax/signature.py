@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from functools import partial
-from typing import List
 
 import jax
 import jax.numpy as jnp
@@ -9,7 +10,7 @@ from .utils import compress, lyndon_words
 
 
 @partial(jax.jit, static_argnames="depth")
-def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
+def signature(path: jax.Array, depth: int) -> list[jax.Array]:
     """
     Compute the signature of a path
 
@@ -39,7 +40,7 @@ def signature(path: jnp.ndarray, depth: int) -> List[jnp.ndarray]:
 
 
 @partial(jax.jit, static_argnames=["depth", "n_chunks"])
-def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
+def signature_batch(path: jax.Array, depth: int, n_chunks: int):
     """Compute signature for a long path
 
     The path will be divided into chunks. The numbers of chunks
@@ -62,7 +63,7 @@ def signature_batch(path: jnp.ndarray, depth: int, n_chunks: int):
     basepoints = jnp.roll(path_bulk[:, -1], shift=1, axis=0)
     basepoints = basepoints.at[0].set(path[0])
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
-    path_remainder = path[bulk_length - 1 :]  # noqa
+    path_remainder = path[bulk_length - 1 :]
 
     def _signature(path):
         return signature(path, depth)
@@ -86,8 +87,8 @@ def logsignature(path, depth):
 
 
 def signature_to_logsignature(
-    signature: List[jnp.ndarray],
-) -> List[jnp.ndarray]:
+    signature: list[jax.Array],
+) -> list[jax.Array]:
     """
     Compute logsignature from signature
 
@@ -115,14 +116,14 @@ def signature_to_logsignature(
 
 
 def signature_combine(
-    signature1: List[jnp.ndarray],
-    signature2: List[jnp.ndarray],
+    signature1: list[jax.Array],
+    signature2: list[jax.Array],
 ):
     return mult(signature1, signature2)
 
 
 @jax.jit
-def multi_signature_combine(signatures: List[jnp.ndarray]):
+def multi_signature_combine(signatures: list[jax.Array]) -> list[jax.Array]:
     """
     Combine multiple signatures.
 

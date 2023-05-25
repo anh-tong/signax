@@ -30,6 +30,7 @@ python3 -m venv venv
 source ./venv/bin/activate
 pip install -v -e ".[dev]"
 ```
+
 # Post setup
 
 You should prepare pre-commit, which will help you by checking that commits pass

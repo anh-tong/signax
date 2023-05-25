@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import partial
 
 import jax
@@ -39,7 +41,6 @@ def fbm_noise(hurst, t0=0, t1=1, dt=1e-2, *, key):
 def generate_fbm(
     hurst, n_paths, t0: float = 0.0, t1: float = 1.0, dt: float = 1e-2, *, key
 ):
-
     keys = jrandom.split(key, num=n_paths)
     if hurst == 0.5:
         # Generate Brownian motion noise

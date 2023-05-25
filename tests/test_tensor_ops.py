@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -5,6 +7,7 @@ import signatory
 
 # need to install torch and signatory for testing
 import torch
+
 from signax.signature import signature, signature_to_logsignature
 from signax.tensor_ops import (
     addcmul,
@@ -14,12 +17,10 @@ from signax.tensor_ops import (
     restricted_exp,
 )
 
-
 jax.config.update("jax_platform_name", "cpu")
 
 
 def test_otimes():
-
     # 1D x 1D
     x = jnp.array([1.0, 2.0])
     y = jnp.array([3.0, 4.0])
@@ -50,7 +51,6 @@ def test_otimes():
 
 
 def test_addcmul():
-
     x = jnp.array([[1.0, 2.0], [3.0, 4.0]])
     y = jnp.array([1.0, 2.0])
     z = jnp.array([3.0, 4.0])
@@ -59,7 +59,6 @@ def test_addcmul():
 
 
 def test_restricted_exp():
-
     depth = 4
     length, dim = 2, 3
     path = np.random.randn(length, dim)
@@ -79,7 +78,6 @@ def test_restricted_exp():
 
 
 def test_mult_fused_restricted_exp():
-
     depth = 4
     length, dim = 3, 3
     path = np.random.randn(length, dim)
@@ -106,7 +104,6 @@ def test_mult_fused_restricted_exp():
 
 
 def test_mult():
-
     depth = 4
     length, dim = 3, 4
     path = np.random.randn(length, dim)

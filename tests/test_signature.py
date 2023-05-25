@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 import signatory
 import torch
-from signax.signature import (  # noqa: E501
+
+from signax.signature import (
     multi_signature_combine,
     signature,
     signature_batch,
 )
-
 
 jax.config.update("jax_platform_name", "cpu")
 
