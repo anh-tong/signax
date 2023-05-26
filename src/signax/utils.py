@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from functools import partial
+from typing import cast
 
 import jax
 import jax.numpy as jnp
@@ -31,7 +32,7 @@ def index_select(input: jax.Array, indices: jax.Array) -> jax.Array:
     # flatten matrix A in Fortran-style
     flattened = input.ravel("F")
 
-    def _select(index):
+    def _select(index: jax.Array) -> jax.Array:
         """index is a `jnp.ndarray` int"""
 
         # this is the way to compute the position of
@@ -119,7 +120,9 @@ def term_at(
 ) -> jax.Array:
     start, prev_offset = _get_depth(dim, term_i)
 
-    return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+    return cast(
+        jax.Array, _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+    )
 
 
 def unravel_signature(signature: jax.Array, dim: int, depth: int) -> list[jax.Array]:

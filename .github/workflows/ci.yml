@@ -40,8 +40,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.11"]
-        runs-on: [ubuntu-latest, macos-latest]
+        python-version: ["3.8", "3.9"]
+        runs-on: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v3
@@ -105,7 +105,3 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         if: github.event_name == 'release' && github.event.action == 'published'
-        with:
-          # Remember to tell (test-)pypi about this repo before publishing
-          # Remove this line to publish to PyPI
-          repository-url: https://test.pypi.org/legacy/

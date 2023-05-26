@@ -30,6 +30,9 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   "typing_extensions >=3.7; python_version<'3.8'",
+  "jax>=0.3.10",
+  "equinox",
+  "jaxlib"
 ]
 
 [project.optional-dependencies]
@@ -91,11 +94,17 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+disable_error_code = [
+    "no-any-return",    # return involving untyped jax functions
+    "no-untyped-call",  # e.g. jax.fori_loop
+    "misc",             # subclassing untyped equinox module
+    "import",           # using equinox (untyped)
+]
 
 [[tool.mypy.overrides]]
 module = "signax.*"
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 
 [tool.ruff]

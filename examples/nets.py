@@ -70,8 +70,6 @@ class Augment(eqx.nn.Sequential):
     def __call__(
         self,
         x: jnp.ndarray,
-        *,
-        key: jax.random.PRNGKey | None = None,
     ):
         """x size (length, dim)"""
         length, _ = x.shape
@@ -109,7 +107,7 @@ class Window(eqx.Module):
         self.window_len = window_len
         self.signature_depth = signature_depth
 
-    def __call__(self, x, *, key):
+    def __call__(self, x):
         """
         Example:
 
@@ -166,7 +164,7 @@ class WindowAdjusted(eqx.Module):
         self.adjusted_length = adjusted_length
         self.signature_depth = signature_depth
 
-    def __call__(self, x, *, key=None):
+    def __call__(self, x):
         """
         Transform input `x` into a smaller window.
         Each window starts at index 0 with increasing size according
@@ -277,7 +275,7 @@ class RecurrentNet(eqx.Module):
         self.output_size = output_size
         self.intermediate_outputs = intermediate_outputs
 
-    def __call__(self, input, *, key):
+    def __call__(self, input):
         """
         Args:
             input: size (seq_length, dim)
@@ -400,8 +398,7 @@ def create_deep_recurrence(
             # sigmoid activation at the last layer
             layers.append(eqx.nn.Lambda(jax.nn.sigmoid))
 
-    model = eqx.nn.Sequential(layers)
-    return model
+    return eqx.nn.Sequential(layers)
 
 
 def create_generative_net(dim, *, key):

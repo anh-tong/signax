@@ -20,12 +20,14 @@ def lint(session: nox.Session) -> None:
     session.run("pre-commit", "run", "--all-files", *session.posargs)
 
 
-@nox.session
+@nox.session(python=["3.8", "3.9"])
 def tests(session: nox.Session) -> None:
     """
     Run the unit and regular tests. Use --cov to activate coverage.
     """
     session.install(".[test]")
+    session.install("torch==1.9.0")
+    session.install("signatory==1.2.6.1.9.0", "--no-cache-dir", "--force-reinstall")
     session.run("pytest", *session.posargs)
 
 

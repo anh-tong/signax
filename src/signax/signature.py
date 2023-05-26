@@ -26,8 +26,7 @@ def signature(path: jax.Array, depth: int) -> list[jax.Array]:
     exp_term = restricted_exp(path_increments[0], depth=depth)
 
     def _body(i, val):
-        ret = mult_fused_restricted_exp(path_increments[i], val)
-        return ret
+        return mult_fused_restricted_exp(path_increments[i], val)
 
     exp_term = jax.lax.fori_loop(
         lower=1,
@@ -77,9 +76,9 @@ def signature_batch(path: jax.Array, depth: int, n_chunks: int):
         remainder_signature = signature(path_remainder, depth)
         # combine with the bulk signature
         return mult(bulk_signature, remainder_signature)
-    else:
-        # no remainder, just return the bulk
-        return bulk_signature
+
+    # no remainder, just return the bulk
+    return bulk_signature
 
 
 def logsignature(path, depth):
@@ -111,8 +110,7 @@ def signature_to_logsignature(
     expanded_logsignature = log(signature)
 
     # compress using the information of Lyndon words
-    log_sig = compress(expanded_logsignature, indices)
-    return log_sig
+    return compress(expanded_logsignature, indices)
 
 
 def signature_combine(

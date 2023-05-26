@@ -7,6 +7,7 @@ import signatory
 
 # need to install torch and signatory for testing
 import torch
+from numpy.random import default_rng
 
 from signax.signature import signature, signature_to_logsignature
 from signax.tensor_ops import (
@@ -16,6 +17,9 @@ from signax.tensor_ops import (
     otimes,
     restricted_exp,
 )
+
+rng = default_rng()
+
 
 jax.config.update("jax_platform_name", "cpu")
 
@@ -61,7 +65,7 @@ def test_addcmul():
 def test_restricted_exp():
     depth = 4
     length, dim = 2, 3
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal(length, dim)
 
     signatory_output = (
         signatory.signature(
@@ -80,7 +84,7 @@ def test_restricted_exp():
 def test_mult_fused_restricted_exp():
     depth = 4
     length, dim = 3, 3
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal(length, dim)
 
     # re-test restricted_exp() to make sure it run correctly
     test_restricted_exp()
@@ -106,7 +110,7 @@ def test_mult_fused_restricted_exp():
 def test_mult():
     depth = 4
     length, dim = 3, 4
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal(length, dim)
 
     # use our implementation, need to compute exp first
     increments = jnp.diff(path, axis=0)
@@ -133,7 +137,7 @@ def test_log():
     """Test log via signature_to_logsignature"""
     depth = 4
     length, dim = 3, 2
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal(length, dim)
     jax_path = jnp.array(path)
     jax_signature = signature(jax_path, depth)
     jax_logsignature = signature_to_logsignature(jax_signature)
