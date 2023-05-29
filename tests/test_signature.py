@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import jax
 import jax.numpy as jnp
-import numpy as np
 import signatory
 import torch
-from signax.signature import (  # noqa: E501
+from numpy.random import default_rng
+
+from signax.signature import (
     multi_signature_combine,
     signature,
     signature_batch,
 )
 
+rng = default_rng()
 
 jax.config.update("jax_platform_name", "cpu")
 
@@ -16,10 +20,10 @@ jax.config.update("jax_platform_name", "cpu")
 def test_signature_1d_path():
     depth = 3
     length = 100
-    path = np.random.randn(length, 1)
+    path = rng.standard_normal((length, 1))
     signature(path, depth)
 
-    path = np.random.randn(length)
+    path = rng.standard_normal(length)
     signature(path, depth)
 
 
@@ -27,9 +31,9 @@ def test_multi_signature_combine():
     batch_size = 5
     dim = 5
     signatures = [
-        np.random.randn(batch_size, dim),
-        np.random.randn(batch_size, dim, dim),
-        np.random.randn(batch_size, dim, dim, dim),
+        rng.standard_normal((batch_size, dim)),
+        rng.standard_normal((batch_size, dim, dim)),
+        rng.standard_normal((batch_size, dim, dim, dim)),
     ]
 
     jax_signatures = [jnp.array(x) for x in signatures]
@@ -59,7 +63,7 @@ def test_signature_batch():
     dim = 100
     n_chunks = 10
 
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal((length, dim))
     jax_signature = signature_batch(path, depth, n_chunks)
     jax_sum = sum(jnp.sum(x) for x in jax_signature)
 
@@ -72,7 +76,7 @@ def test_signature_batch():
 
     # has remainder case
     length = 1005
-    path = np.random.randn(length, dim)
+    path = rng.standard_normal((length, dim))
 
     jax_signature = signature_batch(path, depth, n_chunks)
     jax_sum = sum(jnp.sum(x) for x in jax_signature)

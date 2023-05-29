@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import jax
 import jax.numpy as jnp
 from jax.random import PRNGKey
@@ -10,10 +12,9 @@ def get_bm_noise(
 ):
     """Generate examples of a Brownian motion."""
     random_keys = jax.random.split(random_key, num_samples)
-    paths = jnp.array(
+    return jnp.array(
         [gen_bm_noise(random_keys[i], n_points) for i in range(num_samples)]
     )
-    return paths
 
 
 def gen_bm_noise(

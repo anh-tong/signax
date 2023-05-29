@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import jax.numpy as jnp
+
 from signax.utils import index_select
 
 
 def test_index_select():
-
     # first test
     dim = 4
     a = jnp.arange(0, dim**2).reshape((dim, dim))

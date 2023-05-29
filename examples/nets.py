@@ -1,9 +1,12 @@
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Callable
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
+
 from signax.module import SignatureTransform
 from signax.signature import signature, signature_combine
 from signax.utils import flatten
@@ -67,8 +70,6 @@ class Augment(eqx.nn.Sequential):
     def __call__(
         self,
         x: jnp.ndarray,
-        *,
-        key: Optional["jax.random.PRNGKey"] = None,
     ):
         """x size (length, dim)"""
         length, _ = x.shape
@@ -106,7 +107,7 @@ class Window(eqx.Module):
         self.window_len = window_len
         self.signature_depth = signature_depth
 
-    def __call__(self, x, *, key):
+    def __call__(self, x):
         """
         Example:
 
@@ -163,7 +164,7 @@ class WindowAdjusted(eqx.Module):
         self.adjusted_length = adjusted_length
         self.signature_depth = signature_depth
 
-    def __call__(self, x, *, key=None):
+    def __call__(self, x):
         """
         Transform input `x` into a smaller window.
         Each window starts at index 0 with increasing size according
@@ -274,14 +275,14 @@ class RecurrentNet(eqx.Module):
         self.output_size = output_size
         self.intermediate_outputs = intermediate_outputs
 
-    def __call__(self, input, *, key):
+    def __call__(self, input):
         """
         Args:
             input: size (seq_length, dim)
         Returns:
             output: size (seq_lenth, dim)
         """
-        memory = jnp.zeros((self.memory_size))
+        memory = jnp.zeros(self.memory_size)
 
         def f(carry, inp):
             # carry = memory
@@ -397,8 +398,7 @@ def create_deep_recurrence(
             # sigmoid activation at the last layer
             layers.append(eqx.nn.Lambda(jax.nn.sigmoid))
 
-    model = eqx.nn.Sequential(layers)
-    return model
+    return eqx.nn.Sequential(layers)
 
 
 def create_generative_net(dim, *, key):

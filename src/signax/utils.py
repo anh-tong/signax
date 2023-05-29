@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from functools import partial
-from typing import List, Tuple
+from typing import cast
 
 import jax
 import jax.numpy as jnp
 
 
 @jax.jit
-def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
+def index_select(input: jax.Array, indices: jax.Array) -> jax.Array:
     """
     Select entries in m-level tensor based on given indices
     This function will help compressing log-signatures
@@ -28,9 +30,9 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     flattened = input.ravel()
     strides = jnp.array([dim**i for i in range(n)])
     # flatten matrix A in Fortran-style
-    flattened = input.flatten("F")
+    flattened = input.ravel("F")
 
-    def _select(index):
+    def _select(index: jax.Array) -> jax.Array:
         """index is a `jnp.ndarray` int"""
 
         # this is the way to compute the position of
@@ -41,7 +43,7 @@ def index_select(input: jnp.ndarray, indices: jnp.ndarray) -> jnp.ndarray:
     return jax.vmap(_select)(indices)
 
 
-def lyndon_words(depth: int, dim: int) -> List[jnp.ndarray]:
+def lyndon_words(depth: int, dim: int) -> list[jax.Array]:
     """Generate Lyndon words of length `depth` over an `dim`-symbol alphabet
     Example in Python: https://gist.github.com/dvberkel/1950267
 
@@ -65,9 +67,9 @@ def lyndon_words(depth: int, dim: int) -> List[jnp.ndarray]:
 
 
 def compress(
-    input: List[jnp.ndarray],
-    indices: List[jnp.ndarray],
-) -> List[jnp.ndarray]:
+    input: list[jax.Array],
+    indices: list[jax.Array],
+) -> list[jax.Array]:
     """
     Compress expanded log-signatures using Lydon words
 
@@ -83,13 +85,13 @@ def compress(
 
 
 @jax.jit
-def flatten(signature: List[jnp.ndarray]) -> jnp.ndarray:
+def flatten(signature: list[jax.Array]) -> jax.Array:
     flattened_terms = tuple(map(jnp.ravel, signature))
     return jnp.concatenate(flattened_terms)
 
 
 @partial(jax.jit, static_argnums=[0, 1])
-def _get_depth(dim: int, depth: int) -> Tuple:
+def _get_depth(dim: int, depth: int) -> tuple[jax.Array, jax.Array]:
     offset = jax.lax.integer_pow(dim, depth)
     start = dim * (1 - offset) // (1 - dim)
 
@@ -98,12 +100,12 @@ def _get_depth(dim: int, depth: int) -> Tuple:
 
 @partial(jax.jit, static_argnums=[1, 2, 3, 4])
 def _term_at(
-    flattened_signature: jnp.ndarray,
+    flattened_signature: jax.Array,
     dim: int,
     term_i: int,
     start: int,
     offset: int,
-) -> jnp.ndarray:
+) -> jax.Array:
     return jax.lax.dynamic_slice(
         flattened_signature,
         (start,),
@@ -112,19 +114,19 @@ def _term_at(
 
 
 def term_at(
-    flattened_signature: jnp.ndarray,
+    flattened_signature: jax.Array,
     dim: int,
     term_i: int,
-) -> jnp.ndarray:
+) -> jax.Array:
     start, prev_offset = _get_depth(dim, term_i)
 
-    return _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+    return cast(
+        jax.Array, _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+    )
 
 
-def unravel_signature(
-    signature: jnp.ndarray, dim: int, depth: int
-) -> List[jnp.ndarray]:
-    unraveled: List[jnp.ndarray] = []
+def unravel_signature(signature: jax.Array, dim: int, depth: int) -> list[jax.Array]:
+    unraveled: list[jax.Array] = []
     start, offset = 0, dim
 
     for term_i in range(depth):
