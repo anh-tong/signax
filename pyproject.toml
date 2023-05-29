@@ -92,8 +92,8 @@ strict = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = false     # ideally, change me back to true and debug
+disallow_incomplete_defs = false  # ideally, change me back to true and debug
 disable_error_code = [
     "no-any-return",    # return involving untyped jax functions
     "no-untyped-call",  # e.g. jax.fori_loop
