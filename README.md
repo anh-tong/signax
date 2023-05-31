@@ -110,11 +110,11 @@ A quick comparison can be found at in the notebook `examples/compare.ipynb`.
 Below plots are comparison of forward and backward pass in both GPU and CPU for
 path `size=(32, 128, 8)` and signature `depth=5`
 
-<table style="background-color:#FFFFFF;">
+<table>
 <thead>
   <tr>
     <th >Forward</th>
-    <th > Backward</th>
+    <th >Backward</th>
   </tr>
 </thead>
 <tbody>
