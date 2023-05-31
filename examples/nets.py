@@ -7,8 +7,8 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 
-from signax.module import SignatureTransform
 from signax import signature, signature_combine
+from signax.module import SignatureTransform
 from signax.utils import flatten
 
 
