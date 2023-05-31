@@ -12,6 +12,7 @@ __all__ = (
     "signature_combine",
     "signature_to_logsignature",
     "multi_signature_combine",
+    "signature_batch",
 )
 
 from signax import module, tensor_ops, utils
@@ -21,4 +22,5 @@ from signax.signatures import (
     signature,
     signature_combine,
     signature_to_logsignature,
+    signature_batch,
 )
