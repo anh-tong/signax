@@ -9,7 +9,7 @@ import signatory
 import torch
 from numpy.random import default_rng
 
-from signax.signature import signature, signature_to_logsignature
+from signax import signature, signature_to_logsignature
 from signax.tensor_ops import (
     addcmul,
     mult,
