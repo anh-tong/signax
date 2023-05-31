@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 __all__ = (
     "SignatureTransform",
     "SignatureCombine",
@@ -21,6 +23,8 @@ class SignatureTransform(eqx.Module):
     def __call__(
         self,
         path: jax.Array,
+        *,
+        key: Any | None = None,
     ) -> jax.Array:
         return flatten(signature(path, self.depth))
 
