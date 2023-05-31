@@ -20,7 +20,7 @@ from signax.signatures import (
     logsignature,
     multi_signature_combine,
     signature,
+    signature_batch,
     signature_combine,
     signature_to_logsignature,
-    signature_batch,
 )
