@@ -8,7 +8,7 @@ __all__ = (
 import equinox as eqx
 import jax
 
-from signax import signature, signature_combine
+from signax.signatures import signature, signature_combine
 from signax.utils import flatten, unravel_signature
 
 
