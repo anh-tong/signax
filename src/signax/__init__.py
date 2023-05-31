@@ -5,6 +5,8 @@ __version__ = "0.1.2"
 __all__ = (
     "__version__",
     "module",
+    "utils",
+    "tensor_ops",
     "signature",
     "logsignature",
     "signature_combine",
@@ -12,7 +14,7 @@ __all__ = (
     "multi_signature_combine",
 )
 
-from signax import module
+from signax import module, utils, tensor_ops
 from signax.signatures import (
     logsignature,
     multi_signature_combine,

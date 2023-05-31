@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+__all__ = (
+    "signature",
+    "logsignature",
+    "signature_batch",
+    "signature_combine",
+    "signature_to_logsignature",
+    "multi_signature_combine",
+)
+
 from functools import partial
 
 import jax

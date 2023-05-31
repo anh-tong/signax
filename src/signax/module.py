@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+__all__ = (
+    "SignatureTransform",
+    "SignatureCombine",
+)
+
 import equinox as eqx
 import jax
 
