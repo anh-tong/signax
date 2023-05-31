@@ -66,9 +66,10 @@ mlp_key, data_key = jrandom.split(key)
 depth = 3
 length, dim = 100, 3
 
-# we signature transfrom
+# create a signature transform at the specified depth
 signature_layer = SignatureTransform(depth=depth)
-# finally, getting output via a neural network
+
+# stack a MLP layer after that
 last_layer = eqx.nn.MLP(
     depth=1, in_size=3 + 3**2 + 3**3, width_size=4, out_size=1, key=mlp_key
 )
@@ -78,7 +79,8 @@ x = jrandom.normal(shape=(length, dim), key=data_key)
 output = model(x)
 ```
 
-Also, check notebooks in `examples` folder for some experiments of
+Also, check the notebooks in `examples` folder for some experiments that
+reproduce the results of the
 [deep signature transforms paper](https://arxiv.org/abs/1905.08494).
 
 ## Installation
@@ -86,7 +88,7 @@ Also, check notebooks in `examples` folder for some experiments of
 Via pip
 
 ```
-pip install signax
+python3 -m pip install signax
 ```
 
 Via source
@@ -94,7 +96,7 @@ Via source
 ```
 git clone https://github.com/anh-tong/signax.git
 cd signax
-python setup.py install .
+python3 -m pip install -v -e .
 ```
 
 ## Parallelism
@@ -108,7 +110,7 @@ A quick comparison can be found at in the notebook `examples/compare.ipynb`.
 Below plots are comparison of forward and backward pass in both GPU and CPU for
 path `size=(32, 128, 8)` and signature `depth=5`
 
-<table>
+<table style="background-color:#FFFFFF;">
 <thead>
   <tr>
     <th >Forward</th>
