@@ -1,6 +1,7 @@
 # Signax: Computing signatures in JAX
 
 [![Actions Status][actions-badge]][actions-link]
+[![Codecov Status][codecov-badge]][codecov-link]
 [![Documentation Status][rtd-badge]][rtd-link]
 [![PyPI version][pypi-version]][pypi-link]
 [![PyPI platforms][pypi-platforms]][pypi-link]
@@ -8,6 +9,8 @@
 <!-- prettier-ignore-start -->
 [actions-badge]:            https://github.com/Anh-Tong/signax/workflows/CI/badge.svg
 [actions-link]:             https://github.com/Anh-Tong/signax/actions
+[codecov-badge]:            https://codecov.io/gh/anh-tong/signax/branch/main/graph/badge.svg?token=SU9HZ9NH70
+[codecov-link]:             https://codecov.io/gh/anh-tong/signax
 [pypi-link]:                https://pypi.org/project/signax/
 [pypi-platforms]:           https://img.shields.io/pypi/pyversions/signax
 [pypi-version]:             https://img.shields.io/pypi/v/signax
