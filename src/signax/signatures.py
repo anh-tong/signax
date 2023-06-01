@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+__all__ = (
+    "signature",
+    "logsignature",
+    "signature_batch",
+    "signature_combine",
+    "signature_to_logsignature",
+    "multi_signature_combine",
+)
+
 from functools import partial
 
 import jax
 import jax.numpy as jnp
 
-from .tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
-from .utils import compress, lyndon_words
+from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
+from signax.utils import compress, lyndon_words
 
 
 @partial(jax.jit, static_argnames="depth")

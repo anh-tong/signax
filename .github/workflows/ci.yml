@@ -70,6 +70,15 @@ jobs:
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
 
+      - name: Run examples
+        run: |
+          cd examples
+          python -m pip install -r requirements.txt
+          python -m pip install jupyter nbclient
+          jupyter execute estimate_hurst.ipynb
+          jupyter execute generative_model.ipynb
+          jupyter execute inversion.ipynb
+
   dist:
     needs: [pre-commit]
     name: Distribution build

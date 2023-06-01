@@ -7,8 +7,8 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 
+from signax import signature, signature_combine
 from signax.module import SignatureTransform
-from signax.signature import signature, signature_combine
 from signax.utils import flatten
 
 
@@ -70,6 +70,8 @@ class Augment(eqx.nn.Sequential):
     def __call__(
         self,
         x: jnp.ndarray,
+        *,
+        key=None,
     ):
         """x size (length, dim)"""
         length, _ = x.shape
@@ -164,7 +166,7 @@ class WindowAdjusted(eqx.Module):
         self.adjusted_length = adjusted_length
         self.signature_depth = signature_depth
 
-    def __call__(self, x):
+    def __call__(self, x, *, key=None):
         """
         Transform input `x` into a smaller window.
         Each window starts at index 0 with increasing size according

@@ -31,8 +31,8 @@ Basic usage
 ```python
 import jax
 import jax.random as jrandom
+import signax
 
-from signax.signature import signature
 
 key = jrandom.PRNGKey(0)
 depth = 3
@@ -41,17 +41,17 @@ depth = 3
 length = 100
 dim = 20
 path = jrandom.normal(shape=(length, dim), key=key)
-output = signature(path, depth)
+output = signax.signature(path, depth)
 # output is a list of array representing tensor algebra
 
 # compute signature for batches (multiple) of paths
 # this is done via `jax.vmap`
 batch_size = 20
 path = jrandom.normal(shape=(batch_size, length, dim), key=key)
-output = jax.vmap(lambda x: signature(x, depth))(path)
+output = jax.vmap(lambda x: signax.signature(x, depth))(path)
 ```
 
-Integrate with [equinox](https://github.com/patrick-kidger/equinox) library
+Integrate with the [equinox](https://github.com/patrick-kidger/equinox) library
 
 ```python
 import equinox as eqx

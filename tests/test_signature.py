@@ -6,7 +6,7 @@ import signatory
 import torch
 from numpy.random import default_rng
 
-from signax.signature import (
+from signax import (
     multi_signature_combine,
     signature,
     signature_batch,

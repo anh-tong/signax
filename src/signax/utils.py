@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+__all__ = (
+    "index_select",
+    "lyndon_words",
+    "compress",
+    "unravel_signature",
+    "flatten",
+    "term_at",
+)
+
 from collections import defaultdict
 from functools import partial
 from typing import cast
