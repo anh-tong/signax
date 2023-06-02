@@ -32,7 +32,8 @@ dependencies = [
   "typing_extensions >=3.7; python_version<'3.8'",
   "jax>=0.3.10",
   "equinox",
-  "jaxlib"
+  "jaxlib",
+  "jaxtyping"
 ]
 
 [project.optional-dependencies]
@@ -135,6 +136,7 @@ select = [
 extend-ignore = [
   "PLR",    # Design related pylint codes
   "E501",   # Line too long
+  "F722",   # Exclude due to jaxtyping
 ]
 target-version = "py38"
 typing-modules = ["signax._compat.typing"]

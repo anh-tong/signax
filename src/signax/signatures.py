@@ -13,53 +13,69 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+from jaxtyping import Array, Float
 
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
 from signax.utils import compress, lyndon_words
 
 
-@partial(jax.jit, static_argnames="depth")
-def signature(path: jax.Array, depth: int) -> list[jax.Array]:
+@partial(jax.jit, static_argnames=["depth", "stream"])
+def signature(
+    path: Float[Array, "path_len dim"],
+    depth: int,
+    stream: bool = False,
+) -> list[Array]:
     """
     Compute the signature of a path
 
     Args:
         path: size (length, dim)
         depth: signature is truncated at this depth
+        stream: whether to handle `path` as a stream. Default is False
     Returns:
-        A list of `jnp.ndarray` in a form
-        [(dim, ), (dim, dim), (dim, dim, dim), ...]
+        If `stream` is `True`, this will return a list of `Array` in a form
+            [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
+        If `stream` is `False`, this will return a list of `Array` in a form
+            [(dim, ), (dim, dim), (dim, dim, dim), ...]
     """
 
     path_increments = jnp.diff(path, axis=0)
     exp_term = restricted_exp(path_increments[0], depth=depth)
 
-    def _body(i, val):
-        return mult_fused_restricted_exp(path_increments[i], val)
+    def _body(carry, path_inc):
+        ret = mult_fused_restricted_exp(path_inc, carry)
+        return ret, ret
 
-    exp_term = jax.lax.fori_loop(
-        lower=1,
-        upper=path_increments.shape[0],
-        body_fun=_body,
-        init_val=exp_term,
-    )
+    carry, stacked = jax.lax.scan(f=_body, init=exp_term, xs=path_increments[1:])
 
-    return exp_term
+    if stream:
+        return [
+            jnp.concatenate([first[None, ...], rest], axis=0)
+            for first, rest in zip(exp_term, stacked)
+        ]
+
+    return carry
 
 
-@partial(jax.jit, static_argnames=["depth", "n_chunks"])
-def signature_batch(path: jax.Array, depth: int, n_chunks: int):
+@partial(jax.jit, static_argnames=["depth", "n_chunks", "stream"])
+def signature_batch(
+    path: Float[Array, "path_len dim"], depth: int, n_chunks: int, stream: bool = False
+) -> list[Array]:
     """Compute signature for a long path
 
-    The path will be divided into chunks. The numbers of chunks
-    is set manually.
+    The path will be divided into chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
+    The numbers of chunks is set manually.
 
     Args:
-        path: size (length, dim)
+        path: Input path
         depth: signature depth
-        n_chunks:
+        n_chunks: number of chunks
+        stream: whether to handle `path` as a stream
     Returns:
-        signature in a form of [(n,), (n,n), ...]
+        If `stream` is `True`, this will return a list of `Array` in a form
+            [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
+        If `stream` is `False`, this will return a list of `Array` in a form
+            [(dim, ), (dim, dim), (dim, dim, dim), ...]
     """
     length, dim = path.shape
     chunk_length = int((length - 1) / n_chunks)
@@ -73,18 +89,57 @@ def signature_batch(path: jax.Array, depth: int, n_chunks: int):
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
     path_remainder = path[bulk_length - 1 :]
 
-    def _signature(path):
-        return signature(path, depth)
+    multi_signatures = jax.vmap(partial(signature, depth=depth, stream=stream))(
+        path_bulk
+    )
 
-    # this will return a list of [(b, n), (b, n, n), ...]
-    multi_signatures = jax.vmap(_signature)(path_bulk)
+    if stream:
+        # `multi_signature` in a form of [(chunk, chunk_len, dim), (chunk, chunk_len, dim, dim), ...]
+        def scan_fn(last_sig, current_stream_signature):
+            # combine the last signature of the previous chunk with every signature in the current stream
+            combined = jax.vmap(partial(signature_combine, last_sig))(
+                current_stream_signature
+            )
+            # return `carry` as the last signature of the combined signatures
+            last_sig = [x[-1, ...] for x in combined]
+            return last_sig, combined
+
+        # initial value is the last of the stream in  the first chunk
+        init = [sig[0, -1, ...] for sig in multi_signatures]
+        last_sig, bulk_signature = jax.lax.scan(
+            f=scan_fn, init=init, xs=[sig[1:] for sig in multi_signatures]
+        )
+
+        bulk_signature = [
+            jnp.concatenate([x[0][None, ...], y])
+            for x, y in zip(multi_signatures, bulk_signature)
+        ]
+        bulk_signature = [
+            jnp.reshape(sig, (sig.shape[0] * sig.shape[1],) + sig.shape[2:])
+            for sig in bulk_signature
+        ]
+
+        if remainder != 0:
+            remainder_signature = signature(path_remainder, depth, stream)
+            combined = jax.vmap(partial(signature_combine, last_sig))(
+                remainder_signature
+            )
+            return [
+                jnp.concatenate([bulk, rest], axis=0)
+                for bulk, rest in zip(bulk_signature, combined)
+            ]
+
+        return bulk_signature
+
+    # this is the case when `stream`=False
+    # `multi_signature` in a form of [(chunk, dim), (chunk, dim, dim), ...]
     bulk_signature = multi_signature_combine(multi_signatures)
 
     if remainder != 0:
         # compute the signature of the remainder chunk
-        remainder_signature = signature(path_remainder, depth)
+        remainder_signature = signature(path_remainder, depth, stream)
         # combine with the bulk signature
-        return mult(bulk_signature, remainder_signature)
+        return signature_combine(bulk_signature, remainder_signature)
 
     # no remainder, just return the bulk
     return bulk_signature
@@ -123,14 +178,14 @@ def signature_to_logsignature(
 
 
 def signature_combine(
-    signature1: list[jax.Array],
-    signature2: list[jax.Array],
-):
+    signature1: list[Array],
+    signature2: list[Array],
+) -> list[Array]:
     return mult(signature1, signature2)
 
 
 @jax.jit
-def multi_signature_combine(signatures: list[jax.Array]) -> list[jax.Array]:
+def multi_signature_combine(signatures: list[Array]) -> list[Array]:
     """
     Combine multiple signatures.
 
