@@ -15,7 +15,7 @@ class SignatureTransform(eqx.Module):
     depth: int
     stream: bool
 
-    def __init__(self, depth: int, stream: bool) -> None:
+    def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
         self.stream = stream
 
@@ -32,7 +32,7 @@ class LogSignatureTransform(eqx.Module):
     depth: int
     stream: bool
 
-    def __init__(self, depth: int, stream: bool) -> None:
+    def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
         self.stream = stream
 
