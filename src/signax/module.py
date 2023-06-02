@@ -2,42 +2,44 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = (
-    "SignatureTransform",
-    "SignatureCombine",
-)
+__all__ = ("SignatureTransform", "LogSignatureTransform")
 
 import equinox as eqx
-import jax
+from jaxtyping import Array, Float
 
-from signax.signatures import signature, signature_combine
-from signax.utils import flatten, unravel_signature
+from signax.signatures import logsignature, signature
+from signax.utils import flatten
 
 
 class SignatureTransform(eqx.Module):
     depth: int
+    stream: bool
 
-    def __init__(self, depth: int):
+    def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
+        self.stream = stream
 
     def __call__(
         self,
-        path: jax.Array,
+        path: Float[Array, "path_len dim"],
         *,
         key: Any | None = None,
-    ) -> jax.Array:
-        return flatten(signature(path, self.depth))
+    ) -> Array:
+        return flatten(signature(path, self.depth, self.stream))
 
 
-class SignatureCombine(eqx.Module):
-    dim: int
+class LogSignatureTransform(eqx.Module):
     depth: int
+    stream: bool
 
-    def __init__(self, dim: int, depth: int):
-        self.dim = dim
+    def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
+        self.stream = stream
 
-    def __call__(self, signature1: jax.Array, signature2: jax.Array):
-        sig1 = unravel_signature(signature1, self.dim, self.depth)
-        sig2 = unravel_signature(signature2, self.dim, self.depth)
-        return flatten(signature_combine(sig1, sig2))
+    def __call__(
+        self,
+        path: Float[Array, "path_len dim"],
+        *,
+        key: Any | None = None,
+    ) -> Array:
+        return flatten(logsignature(path, self.depth, self.stream))

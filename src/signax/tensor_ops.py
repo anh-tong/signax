@@ -82,13 +82,6 @@ def mult_inner(
 
     this function returns
         $sum_{i=1}^n A_i x B_{n - i}$
-
-
-    Note this is hard to convert to `jax.lax.fori_loop`.
-    I don't know if it's possible. Several attempts but
-    `TracerIntergerConversionError` is encountered because
-    getting index of a list (it's okay to get index of ndarray
-    but not for lists)
     """
     return sum(
         [

@@ -22,6 +22,7 @@ rng = default_rng()
 
 
 jax.config.update("jax_platform_name", "cpu")
+jax.config.update("jax_enable_x64", True)
 
 
 def test_otimes():
@@ -67,17 +68,15 @@ def test_restricted_exp():
     length, dim = 2, 3
     path = rng.standard_normal((length, dim))
 
-    signatory_output = (
-        signatory.signature(
-            torch.tensor(path)[None, ...],
-            depth=depth,
-        )
-        .sum()
-        .item()
+    signatory_output = signatory.signature(
+        torch.tensor(path)[None, ...],
+        depth=depth,
     )
+    signatory_output = jnp.array(signatory_output.numpy())
+
     jax_output = restricted_exp(jnp.diff(path, axis=0), depth=depth)
-    jax_output = sum([jnp.sum(x) for x in jax_output])
-    # only check the sum of output in two cases are the same
+    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
+
     assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
 
 
@@ -89,22 +88,19 @@ def test_mult_fused_restricted_exp():
     # re-test restricted_exp() to make sure it run correctly
     test_restricted_exp()
 
-    signatory_output = (
-        signatory.signature(
-            torch.tensor(path)[None, ...],
-            depth=depth,
-        )
-        .sum()
-        .item()
+    signatory_output = signatory.signature(
+        torch.tensor(path)[None, ...],
+        depth=depth,
     )
+    signatory_output = jnp.array(signatory_output.numpy())
 
     # our computation
     increments = jnp.diff(path, axis=0)
     exp_term = restricted_exp(increments[0], depth)
     jax_output = mult_fused_restricted_exp(increments[1], exp_term)
-    jax_output = sum([jnp.sum(x) for x in jax_output])
-    # again, just check the sum
-    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
+    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
+
+    assert jnp.allclose(signatory_output, jax_output)
 
 
 def test_mult():
@@ -117,8 +113,7 @@ def test_mult():
     exp1 = restricted_exp(increments[0], depth)
     exp2 = restricted_exp(increments[1], depth)
     combine = mult(exp1, exp2)
-    jax_output = sum(jnp.sum(x) for x in combine)
-    jax_output = jax_output.item()
+    jax_output = jnp.concatenate([jnp.ravel(x) for x in combine])
 
     # use signatory
     exp1 = torch.tensor(
@@ -127,10 +122,10 @@ def test_mult():
     exp2 = torch.tensor(
         np.array(jnp.concatenate([x.ravel() for x in exp2])),
     )[None, :]
-    signatory_output = signatory.signature_combine(exp2, exp1, dim, depth)
-    signatory_output = signatory_output.sum().item()
+    signatory_output = signatory.signature_combine(exp1, exp2, dim, depth)
+    signatory_output = jnp.array(signatory_output.numpy())
 
-    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
+    assert jnp.allclose(signatory_output, jax_output)
 
 
 def test_log():
@@ -141,9 +136,7 @@ def test_log():
     jax_path = jnp.array(path)
     jax_signature = signature(jax_path, depth)
     jax_logsignature = signature_to_logsignature(jax_signature)
-
-    jax_output = sum(jnp.sum(x) for x in jax_logsignature)
-    jax_output = jax_output.item()
+    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
 
     torch_signature = signatory.signature(
         torch.tensor(path)[None, ...],
@@ -155,6 +148,6 @@ def test_log():
         depth,
     )
 
-    torch_output = torch_logsignature.sum().item()
+    torch_output = jnp.array(torch_logsignature.numpy())
 
-    assert jnp.allclose(torch_output, jax_output, rtol=1e-3, atol=1e-5)
+    assert jnp.allclose(torch_output, jax_output)
