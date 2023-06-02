@@ -145,8 +145,13 @@ def signature_batch(
     return bulk_signature
 
 
-def logsignature(path: Float[Array, "path_len dim"], depth: int) -> list[Array]:
-    return signature_to_logsignature(signature(path, depth))
+def logsignature(
+    path: Float[Array, "path_len dim"], depth: int, stream: bool = False
+) -> list[Array]:
+    sig = signature(path, depth, stream)
+    if stream:
+        return jax.vmap(signature_to_logsignature)(sig)
+    return signature_to_logsignature(sig)
 
 
 def signature_to_logsignature(
