@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ("SignatureTransform",)
+__all__ = ("SignatureTransform", "LogSignatureTransform")
 
 import equinox as eqx
 from jaxtyping import Array, Float
