@@ -7,12 +7,7 @@ import signatory
 import torch
 from numpy.random import default_rng
 
-from signax import (
-    logsignature,
-    multi_signature_combine,
-    signature,
-    signature_batch,
-)
+from signax import logsignature, multi_signature_combine, signature
 
 rng = default_rng()
 
@@ -68,7 +63,7 @@ def test_signature_batch(stream):
     n_chunks = 10
 
     path = rng.standard_normal((length, dim))
-    jax_signature = signature_batch(path, depth, n_chunks, stream=stream)
+    jax_signature = signature(path, depth, n_chunks, stream=stream)
     ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
     jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
 
@@ -84,7 +79,7 @@ def test_signature_batch(stream):
     length = 1005
     path = rng.standard_normal((length, dim))
 
-    jax_signature = signature_batch(path, depth, n_chunks, stream)
+    jax_signature = signature(path, depth, n_chunks, stream)
     jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
 
     torch_path = torch.tensor(path)

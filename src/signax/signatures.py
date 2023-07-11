@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = (
     "signature",
     "logsignature",
-    "signature_batch",
     "signature_combine",
     "signature_to_logsignature",
     "multi_signature_combine",
@@ -17,13 +16,12 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float
 
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
-from signax.utils import compress, lyndon_words, flatten
+from signax.utils import compress, lyndon_words
 
 
 def error(path, transforms):
-    raise ValueError(
-        f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
-    )
+    msg = f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
+    raise ValueError(msg)
 
 
 @partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
@@ -42,9 +40,9 @@ def signature(
         depth: signature is truncated at this depth
         stream: whether to handle `path` as a stream. Default is False
         flatten: whether to flatten the output. Default is False
-        num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into 
+        num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into
         chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
-    
+
     Returns:
         If `stream` is `True`, this will return a list of `Array` in a form
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
@@ -86,6 +84,7 @@ def _signature_dispatch(
         return flatten(res)
     return res
 
+
 @partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
 def _signature(
     path: Float[Array, "path_len dim"],
@@ -94,12 +93,15 @@ def _signature(
     num_chunks: int = 1,
 ) -> list[Array]:
     """
-    Compute the signature of a path
+    Compute the signature of a path. Optionally, divide the path into chunks to compute signatures
+    and combine them using Chen's identity (useful for long paths).
 
     Args:
         path: size (length, dim)
         depth: signature is truncated at this depth
         stream: whether to handle `path` as a stream. Default is False
+        num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into
+        chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
     Returns:
         If `stream` is `True`, this will return a list of `Array` in a form
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
@@ -125,8 +127,6 @@ def _signature(
         ]
 
     return carry
-
-    
 
 
 @partial(jax.jit, static_argnames=["depth", "n_chunks", "stream"])
@@ -214,12 +214,21 @@ def _signature_chunked(
 
 
 def logsignature(
-    path: Float[Array, "path_len dim"], depth: int, stream: bool = False
+    path: Float[Array, "path_len dim"] | Float[Array, "path_len dim dim"],
+    depth: int,
+    stream: bool = False,
+    num_chunks: int = 1,
+    flatten: bool = False,
 ) -> list[Array]:
-    sig = signature(path, depth, stream)
+    sig = signature(path, depth, stream, num_chunks, flatten=False)
     if stream:
-        return jax.vmap(signature_to_logsignature)(sig)
-    return signature_to_logsignature(sig)
+        res = jax.vmap(signature_to_logsignature)(sig)
+        if flatten:
+            return flatten(res)
+    res = signature_to_logsignature(sig)
+    if flatten:
+        return flatten(res)
+    return res
 
 
 def signature_to_logsignature(
