@@ -12,18 +12,86 @@ __all__ = (
 from functools import partial
 
 import jax
+import jax.experimental.host_callback as hci
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
-from signax.utils import compress, lyndon_words
+from signax.utils import compress, lyndon_words, flatten
 
 
-@partial(jax.jit, static_argnames=["depth", "stream"])
+def error(path, transforms):
+    raise ValueError(
+        f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
+    )
+
+
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
 def signature(
+    path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
+    depth: int,
+    stream: bool = False,
+    flatten: bool = False,
+    num_chunks: int = 1,
+) -> list[Array]:
+    """
+    Compute the signature of a path. Automatically dispatches to vmap or not based on the shape of `path`.
+
+    Args:
+        path: size (length, dim) or (batch, length, dim)
+        depth: signature is truncated at this depth
+        stream: whether to handle `path` as a stream. Default is False
+        flatten: whether to flatten the output. Default is False
+        num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into 
+        chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
+    
+    Returns:
+        If `stream` is `True`, this will return a list of `Array` in a form
+            [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
+        If `stream` is `False`, this will return a list of `Array` in a form
+            [(dim, ), (dim, dim), (dim, dim, dim), ...]
+        If `flatten` is `True`, this will return a flattened array of shape
+            (dim + dim**2 + ... + dim**depth, )
+        If your path is of shape (batch, path_len, dim), all of the above will have an extra
+        dimension of size `batch` as the first dimension.
+
+    """
+    # this is just to handle shape errors using hci
+    return jax.lax.cond(
+        path.ndim == 2 or path.ndim == 3,
+        _signature_dispatch,
+        lambda path, depth, stream, flatten, num_chunks: hci.id_tap(error, path),
+        operand=(path, depth, stream, flatten, num_chunks),
+    )
+
+
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
+def _signature_dispatch(
+    path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
+    depth: int,
+    stream: bool = False,
+    flatten: bool = False,
+    num_chunks: int = 1,
+) -> list[Array]:
+    """
+    Compute the signature of a path, but dispatches to the correct function to mimic signatory.
+    """
+    res = jax.lax.cond(
+        path.ndim == 2,
+        _signature,
+        jax.vmap(_signature, in_axes=(0, None, None, None, None)),  # path.ndim == 3
+        operand=(path, depth, stream, flatten, num_chunks),
+    )
+    if flatten:
+        return flatten(res)
+    return res
+
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
+def _signature(
     path: Float[Array, "path_len dim"],
     depth: int,
     stream: bool = False,
+    num_chunks: int = 1,
 ) -> list[Array]:
     """
     Compute the signature of a path
@@ -38,6 +106,8 @@ def signature(
         If `stream` is `False`, this will return a list of `Array` in a form
             [(dim, ), (dim, dim), (dim, dim, dim), ...]
     """
+    if num_chunks >= 1:
+        return _signature_chunked(path, depth, num_chunks, stream)
 
     path_increments = jnp.diff(path, axis=0)
     exp_term = restricted_exp(path_increments[0], depth=depth)
@@ -56,16 +126,14 @@ def signature(
 
     return carry
 
+    
+
 
 @partial(jax.jit, static_argnames=["depth", "n_chunks", "stream"])
-def signature_batch(
+def _signature_chunked(
     path: Float[Array, "path_len dim"], depth: int, n_chunks: int, stream: bool = False
 ) -> list[Array]:
-    """Compute signature for a long path
-
-    The path will be divided into chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
-    The numbers of chunks is set manually.
-
+    """Compute signature for a long path by dividing it into chunks.
     Args:
         path: Input path
         depth: signature depth
