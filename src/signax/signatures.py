@@ -11,12 +11,11 @@ __all__ = (
 from functools import partial
 
 import jax
-import jax.experimental.host_callback as hci
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
+from signax import utils
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
-from signax.utils import compress, lyndon_words
 
 
 def error(path, transforms):
@@ -24,7 +23,7 @@ def error(path, transforms):
     raise ValueError(msg)
 
 
-@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
+@partial(jax.jit, static_argnames=("num_chunks", "depth", "stream", "flatten"))
 def signature(
     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
     depth: int,
@@ -54,43 +53,40 @@ def signature(
         dimension of size `batch` as the first dimension.
 
     """
+    if num_chunks > 1:
+        sig_fun = partial(_signature_chunked, num_chunks=num_chunks)
+    else:
+        sig_fun = _signature
     # this is just to handle shape errors using hci
-    return jax.lax.cond(
-        path.ndim == 2 or path.ndim == 3,
-        _signature_dispatch,
-        lambda path, depth, stream, flatten, num_chunks: hci.id_tap(error, path),
-        operand=(path, depth, stream, flatten, num_chunks),
-    )
+    if path.ndim == 2:
+        return sig_fun(path, depth, stream, flatten)  # path.ndim == 2
+    if path.ndim == 3:
+        return jax.vmap(sig_fun, in_axes=(0, None, None, None))(
+            path, depth, stream, flatten
+        )  # path.ndim == 3
+    msg = f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
+    raise ValueError(msg)
 
 
-@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
-def _signature_dispatch(
-    path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
-    depth: int,
-    stream: bool = False,
-    flatten: bool = False,
-    num_chunks: int = 1,
-) -> list[Array]:
-    """
-    Compute the signature of a path, but dispatches to the correct function to mimic signatory.
-    """
-    res = jax.lax.cond(
-        path.ndim == 2,
-        _signature,
-        jax.vmap(_signature, in_axes=(0, None, None, None, None)),  # path.ndim == 3
-        operand=(path, depth, stream, flatten, num_chunks),
-    )
-    if flatten:
-        return flatten(res)
-    return res
+# @partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
+# def _signature_dispatch(
+#     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
+#     depth: int,
+#     stream: bool = False,
+#     flatten: bool = False,
+#     num_chunks: int = 1,
+# ) -> list[Array]:
+#     """
+#     Compute the signature of a path, but dispatches to the correct function to mimic signatory.
+#     """
 
 
-@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten"])
 def _signature(
     path: Float[Array, "path_len dim"],
     depth: int,
     stream: bool = False,
-    num_chunks: int = 1,
+    flatten: bool = False,
 ) -> list[Array]:
     """
     Compute the signature of a path. Optionally, divide the path into chunks to compute signatures
@@ -100,16 +96,13 @@ def _signature(
         path: size (length, dim)
         depth: signature is truncated at this depth
         stream: whether to handle `path` as a stream. Default is False
-        num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into
-        chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
-    Returns:
+        flatten: whether to flatten the output. Default is False
+
         If `stream` is `True`, this will return a list of `Array` in a form
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
         If `stream` is `False`, this will return a list of `Array` in a form
             [(dim, ), (dim, dim), (dim, dim, dim), ...]
     """
-    if num_chunks >= 1:
-        return _signature_chunked(path, depth, num_chunks, stream)
 
     path_increments = jnp.diff(path, axis=0)
     exp_term = restricted_exp(path_increments[0], depth=depth)
@@ -121,17 +114,24 @@ def _signature(
     carry, stacked = jax.lax.scan(f=_body, init=exp_term, xs=path_increments[1:])
 
     if stream:
-        return [
+        res = [
             jnp.concatenate([first[None, ...], rest], axis=0)
             for first, rest in zip(exp_term, stacked)
         ]
+    else:
+        res = carry
+    if flatten:
+        res = utils.flatten(res)
+    return res
 
-    return carry
 
-
-@partial(jax.jit, static_argnames=["depth", "n_chunks", "stream"])
+@partial(jax.jit, static_argnames=["depth", "n_chunks", "stream", "flatten"])
 def _signature_chunked(
-    path: Float[Array, "path_len dim"], depth: int, n_chunks: int, stream: bool = False
+    path: Float[Array, "path_len dim"],
+    depth: int,
+    n_chunks: int,
+    stream: bool = False,
+    flatten: bool = False,
 ) -> list[Array]:
     """Compute signature for a long path by dividing it into chunks.
     Args:
@@ -139,6 +139,7 @@ def _signature_chunked(
         depth: signature depth
         n_chunks: number of chunks
         stream: whether to handle `path` as a stream
+        flatten: whether to flatten the output
     Returns:
         If `stream` is `True`, this will return a list of `Array` in a form
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
@@ -157,7 +158,7 @@ def _signature_chunked(
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
     path_remainder = path[bulk_length - 1 :]
 
-    multi_signatures = jax.vmap(partial(signature, depth=depth, stream=stream))(
+    multi_signatures = jax.vmap(partial(_signature, depth=depth, stream=stream))(
         path_bulk
     )
 
@@ -210,6 +211,8 @@ def _signature_chunked(
         return signature_combine(bulk_signature, remainder_signature)
 
     # no remainder, just return the bulk
+    if flatten:
+        bulk_signature = utils.flatten(bulk_signature)
     return bulk_signature
 
 
@@ -224,7 +227,7 @@ def logsignature(
     if stream:
         res = jax.vmap(signature_to_logsignature)(sig)
         if flatten:
-            return flatten(res)
+            return utils.flatten(res)
     res = signature_to_logsignature(sig)
     if flatten:
         return flatten(res)
@@ -250,13 +253,13 @@ def signature_to_logsignature(
     depth = len(signature)
     dim = signature[0].shape[0]
 
-    indices = lyndon_words(depth, dim)
+    indices = utils.lyndon_words(depth, dim)
 
     # compute Lyndon words given `depth` and `dim`
     expanded_logsignature = log(signature)
 
     # compress using the information of Lyndon words
-    return compress(expanded_logsignature, indices)
+    return utils.compress(expanded_logsignature, indices)
 
 
 def signature_combine(

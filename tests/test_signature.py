@@ -129,3 +129,32 @@ def test_logsignature(stream):
     torch_signature = jnp.array(torch_signature.numpy())
 
     assert jnp.allclose(jax_signature, torch_signature)
+
+
+@pytest.mark.parametrize("flatten", [True, False])
+def test_signature_size(stream, flatten):
+    length, channels = 4, 3
+    corpus = jnp.ones((length, channels))
+    sig = signature(corpus, depth=3, flatten=flatten, stream=stream)
+    if flatten:
+        assert sig.shape == (1 + channels + channels**2 + channels**3,)
+    else:
+        assert len(sig) == 3
+
+
+@pytest.mark.parametrize("flatten", [True, False])
+def test_signature_size_batch(stream, flatten):
+    batch, length, channels = 2, 4, 3
+    corpus = jnp.ones((batch, length, channels))
+    sig = signature(corpus, depth=3, flatten=flatten, stream=stream)
+    if flatten:
+        assert sig.shape == (batch, 1 + channels + channels**2 + channels**3)
+    else:
+        assert len(sig) == batch
+
+
+def test_invalid_path_shape():
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        signature(jnp.ones((10, 10, 10, 10)), 2)
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        signature(jnp.ones((10,)), 2)
