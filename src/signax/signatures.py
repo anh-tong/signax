@@ -9,6 +9,7 @@ __all__ = (
 )
 
 from functools import partial
+from typing import Callable
 
 import jax
 import jax.numpy as jnp
@@ -18,11 +19,6 @@ from signax import utils
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
 
 
-def error(path, transforms):
-    msg = f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
-    raise ValueError(msg)
-
-
 @partial(jax.jit, static_argnames=("num_chunks", "depth", "stream", "flatten"))
 def signature(
     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
@@ -30,7 +26,7 @@ def signature(
     stream: bool = False,
     flatten: bool = False,
     num_chunks: int = 1,
-) -> list[Array]:
+) -> list[Array] | Array:
     """
     Compute the signature of a path. Automatically dispatches to vmap or not based on the shape of `path`.
 
@@ -54,31 +50,32 @@ def signature(
 
     """
     if num_chunks > 1:
-        sig_fun = partial(_signature_chunked, num_chunks=num_chunks)
+        sig_fun: Callable[[Array, int, bool, int], Array | list[Array]] = partial(
+            _signature_chunked,
+            num_chunks=num_chunks,
+            depth=depth,
+            stream=stream,
+            flatten=flatten,
+        )
     else:
-        sig_fun = _signature
-    # this is just to handle shape errors using hci
+        sig_fun = partial(_signature, depth=depth, stream=stream, flatten=flatten)
+    # this is just to handle shape errors
     if path.ndim == 2:
-        return sig_fun(path, depth, stream, flatten)  # path.ndim == 2
+        return sig_fun(path)  # regular case
     if path.ndim == 3:
-        return jax.vmap(sig_fun, in_axes=(0, None, None, None))(
-            path, depth, stream, flatten
-        )  # path.ndim == 3
-    msg = f"path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
+        if flatten:
+            return jax.vmap(sig_fun)(
+                path
+            )  # can use vmap when flattening since it's all arrays
+        return [
+            sig_fun(path[i]) for i in range(path.shape[0])
+        ]  # otherwise, use scan to handle the batch dimension in the list
+
+        # def body(carry, path): # otherwise, use scan to handle the batch dimension in the list
+        #     return None, sig_fun(path)
+        # return jax.lax.scan(body, None, path)[1]
+    msg = f"Path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
     raise ValueError(msg)
-
-
-# @partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
-# def _signature_dispatch(
-#     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
-#     depth: int,
-#     stream: bool = False,
-#     flatten: bool = False,
-#     num_chunks: int = 1,
-# ) -> list[Array]:
-#     """
-#     Compute the signature of a path, but dispatches to the correct function to mimic signatory.
-#     """
 
 
 @partial(jax.jit, static_argnames=["depth", "stream", "flatten"])
@@ -87,7 +84,7 @@ def _signature(
     depth: int,
     stream: bool = False,
     flatten: bool = False,
-) -> list[Array]:
+) -> list[Array] | Array:
     """
     Compute the signature of a path. Optionally, divide the path into chunks to compute signatures
     and combine them using Chen's identity (useful for long paths).
@@ -216,8 +213,9 @@ def _signature_chunked(
     return bulk_signature
 
 
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
 def logsignature(
-    path: Float[Array, "path_len dim"] | Float[Array, "path_len dim dim"],
+    path: Float[Array, "path_len dim"],
     depth: int,
     stream: bool = False,
     num_chunks: int = 1,
