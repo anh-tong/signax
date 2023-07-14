@@ -230,7 +230,7 @@ def logsignature(
             return flatten_util.ravel_pytree(res)[0]
     res = signature_to_logsignature(sig)
     if flatten:
-        return flatten(res)
+        return flatten_util.ravel_pytree(res)[0]
     return res
 
 
