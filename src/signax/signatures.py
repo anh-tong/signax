@@ -217,12 +217,21 @@ def _signature_chunked(
 
 @partial(jax.jit, static_argnames=["depth", "stream", "flatten", "num_chunks"])
 def logsignature(
-    path: Float[Array, "path_len dim"],
+    path: Float[Array, "batch path_len dim"] | Float[Array, "path_len dim"],
     depth: int,
     stream: bool = False,
     num_chunks: int = 1,
     flatten: bool = False,
-) -> list[Array]:
+) -> list[Array] | Array:
+    """Compute the log of the signature of a path.
+
+    Args:
+        path: Input path
+        depth: signature depth
+        stream: whether to handle `path` as a stream
+        num_chunks: number of chunks to divide the path into
+        flatten: whether to flatten the output
+    """
     sig = signature(path, depth, stream, num_chunks, flatten=False)
     if stream:
         res = jax.vmap(signature_to_logsignature)(sig)
