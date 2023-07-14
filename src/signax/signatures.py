@@ -8,15 +8,19 @@ __all__ = (
     "multi_signature_combine",
 )
 
+import logging
 from functools import partial
 from typing import Callable
 
 import jax
 import jax.numpy as jnp
+from jax import flatten_util
 from jaxtyping import Array, Float
 
 from signax import utils
 from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_exp
+
+logger = logging.getLogger(__name__)
 
 
 @partial(jax.jit, static_argnames=("num_chunks", "depth", "stream", "flatten"))
@@ -50,7 +54,7 @@ def signature(
 
     """
     if num_chunks > 1:
-        sig_fun: Callable[[Array, int, bool, int], Array | list[Array]] = partial(
+        sig_fun: Callable[[Array], Array | list[Array]] = partial(
             _signature_chunked,
             num_chunks=num_chunks,
             depth=depth,
@@ -62,18 +66,16 @@ def signature(
     # this is just to handle shape errors
     if path.ndim == 2:
         return sig_fun(path)  # regular case
-    if path.ndim == 3:
+    if path.ndim == 3:  # batch case (mimics signatory)
         if flatten:
-            return jax.vmap(sig_fun)(
-                path
-            )  # can use vmap when flattening since it's all arrays
-        return [
-            sig_fun(path[i]) for i in range(path.shape[0])
-        ]  # otherwise, use scan to handle the batch dimension in the list
+            return jax.vmap(sig_fun)(path)
+        # if not flattening, use list comprehension since vmap cant handle list outputs
+        # could also use scan here (my basic attempt didn't iterate over batch dimension correctly)
+        if path.shape[0] > 100:
+            msg = "Batched signature computation not called with flatten=True. This may be slow (Python for loop)."
+            logger.warning(msg)
+        return [sig_fun(path[i]) for i in range(path.shape[0])]
 
-        # def body(carry, path): # otherwise, use scan to handle the batch dimension in the list
-        #     return None, sig_fun(path)
-        # return jax.lax.scan(body, None, path)[1]
     msg = f"Path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
     raise ValueError(msg)
 
@@ -118,7 +120,7 @@ def _signature(
     else:
         res = carry
     if flatten:
-        res = utils.flatten(res)
+        res = flatten_util.ravel_pytree(res)[0]
     return res
 
 
@@ -209,7 +211,7 @@ def _signature_chunked(
 
     # no remainder, just return the bulk
     if flatten:
-        bulk_signature = utils.flatten(bulk_signature)
+        bulk_signature = flatten_util.ravel_pytree(bulk_signature)[0]
     return bulk_signature
 
 
@@ -225,7 +227,7 @@ def logsignature(
     if stream:
         res = jax.vmap(signature_to_logsignature)(sig)
         if flatten:
-            return utils.flatten(res)
+            return flatten_util.ravel_pytree(res)[0]
     res = signature_to_logsignature(sig)
     if flatten:
         return flatten(res)

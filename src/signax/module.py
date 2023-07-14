@@ -8,12 +8,12 @@ import equinox as eqx
 from jaxtyping import Array, Float
 
 from signax.signatures import logsignature, signature
-from signax.utils import flatten
 
 
 class SignatureTransform(eqx.Module):
     depth: int
     stream: bool
+    num_chunks: int = 1
 
     def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
@@ -25,12 +25,15 @@ class SignatureTransform(eqx.Module):
         *,
         key: Any | None = None,
     ) -> Array:
-        return flatten(signature(path, self.depth, self.stream))
+        return signature(
+            path, self.depth, self.stream, flatten=True, num_chunks=self.num_chunks
+        )
 
 
 class LogSignatureTransform(eqx.Module):
     depth: int
     stream: bool
+    num_chunks: int = 1
 
     def __init__(self, depth: int, stream: bool = False) -> None:
         self.depth = depth
@@ -42,4 +45,6 @@ class LogSignatureTransform(eqx.Module):
         *,
         key: Any | None = None,
     ) -> Array:
-        return flatten(logsignature(path, self.depth, self.stream))
+        return logsignature(
+            path, self.depth, self.stream, flatten=True, num_chunks=self.num_chunks
+        )
