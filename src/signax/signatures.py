@@ -124,7 +124,7 @@ def _signature(
     return res
 
 
-@partial(jax.jit, static_argnames=["depth", "n_chunks", "stream", "flatten"])
+@partial(jax.jit, static_argnames=["depth", "num_chunks", "stream", "flatten"])
 def _signature_chunked(
     path: Float[Array, "path_len dim"],
     depth: int,
