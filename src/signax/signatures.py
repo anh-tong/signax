@@ -192,10 +192,16 @@ def _signature_chunked(
             combined = jax.vmap(partial(signature_combine, last_sig))(
                 remainder_signature
             )
-            return [
+            res = [
                 jnp.concatenate([bulk, rest], axis=0)
                 for bulk, rest in zip(bulk_signature, combined)
             ]
+            if flatten:
+                res = flatten_util.ravel_pytree(res)[0]
+            return res
+
+        if flatten:
+            bulk_signature = flatten_util.ravel_pytree(bulk_signature)[0]
 
         return bulk_signature
 
@@ -207,7 +213,10 @@ def _signature_chunked(
         # compute the signature of the remainder chunk
         remainder_signature = signature(path_remainder, depth, stream)
         # combine with the bulk signature
-        return signature_combine(bulk_signature, remainder_signature)
+        res = signature_combine(bulk_signature, remainder_signature)
+        if flatten:
+            res = flatten_util.ravel_pytree(res)[0]
+        return res
 
     # no remainder, just return the bulk
     if flatten:
