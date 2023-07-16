@@ -236,12 +236,20 @@ def logsignature(
         path, depth=depth, stream=stream, num_chunks=num_chunks, flatten=False
     )
     if stream:
-        res = jax.vmap(signature_to_logsignature)(sig)
-        if flatten:
-            return flatten_util.ravel_pytree(res)[0]
-    res = signature_to_logsignature(sig)
+        converter = jax.vmap(signature_to_logsignature)
+    else:
+        converter = signature_to_logsignature
+    if path.ndim == 2:
+        res: Array | list[Array] = converter(sig)
+    elif path.ndim == 3:
+        res = jax.vmap(converter)(sig)
+    else:  # should never happen -- caught by signature
+        msg = "You should never see this message (shape logic is handled by signax.signature). Please report this as a bug!"
+        raise ValueError(msg)
     if flatten:
-        return flatten_util.ravel_pytree(res)[0]
+        res = flatten_util.ravel_pytree(res)[0]
+        if path.ndim == 3:
+            res = jnp.reshape(res, (path.shape[0], -1))
     return res
 
 
