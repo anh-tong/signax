@@ -128,7 +128,7 @@ def _signature(
 def _signature_chunked(
     path: Float[Array, "path_len dim"],
     depth: int,
-    n_chunks: int,
+    num_chunks: int,
     stream: bool = False,
     flatten: bool = False,
 ) -> list[Array]:
@@ -146,12 +146,12 @@ def _signature_chunked(
             [(dim, ), (dim, dim), (dim, dim, dim), ...]
     """
     length, dim = path.shape
-    chunk_length = int((length - 1) / n_chunks)
-    remainder = (length - 1) % n_chunks
+    chunk_length = int((length - 1) / num_chunks)
+    remainder = (length - 1) % num_chunks
     bulk_length = length - remainder
 
     path_bulk = path[1:bulk_length]
-    path_bulk = jnp.reshape(path_bulk, (n_chunks, chunk_length, dim))
+    path_bulk = jnp.reshape(path_bulk, (num_chunks, chunk_length, dim))
     basepoints = jnp.roll(path_bulk[:, -1], shift=1, axis=0)
     basepoints = basepoints.at[0].set(path[0])
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
@@ -232,7 +232,9 @@ def logsignature(
         num_chunks: number of chunks to divide the path into
         flatten: whether to flatten the output
     """
-    sig = signature(path, depth, stream, num_chunks, flatten=False)
+    sig = signature(
+        path, depth=depth, stream=stream, num_chunks=num_chunks, flatten=False
+    )
     if stream:
         res = jax.vmap(signature_to_logsignature)(sig)
         if flatten:
