@@ -60,9 +60,9 @@ def test_signature_batch(stream):
     n_chunks = 10
 
     path = rng.standard_normal((length, dim))
-    jax_signature = signature(path, depth=depth, num_chunks=n_chunks, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
+    jax_signature = signature(
+        path, depth=depth, num_chunks=n_chunks, stream=stream, flatten=True
+    )
 
     torch_path = torch.tensor(path)
     torch_signature = signatory.signature(
@@ -76,8 +76,9 @@ def test_signature_batch(stream):
     length = 1005
     path = rng.standard_normal((length, dim))
 
-    jax_signature = signature(path, depth, n_chunks, stream)
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
+    jax_signature = signature(
+        path, depth=depth, num_chunks=n_chunks, stream=stream, flatten=True
+    )
 
     torch_path = torch.tensor(path)
     torch_signature = signatory.signature(
@@ -115,9 +116,7 @@ def test_logsignature(stream):
     dim = 5
 
     path = rng.standard_normal((length, dim))
-    jax_signature = logsignature(path, depth=depth, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
+    jax_signature = logsignature(path, depth=depth, stream=stream, flatten=True)
 
     torch_path = torch.tensor(path)
     torch_signature = signatory.logsignature(
