@@ -111,16 +111,22 @@ def _signature(
         return ret, ret
 
     carry, stacked = jax.lax.scan(f=_body, init=exp_term, xs=path_increments[1:])
-
     if stream:
         res = [
             jnp.concatenate([first[None, ...], rest], axis=0)
             for first, rest in zip(exp_term, stacked)
         ]
+        # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+        if flatten:
+            res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
+            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
     else:
         res = carry
-    if flatten:
-        res = flatten_util.ravel_pytree(res)[0]
+        # `res` has shape [(dim,), (dim, dim), ...]
+        if flatten:
+            res = flatten_util.ravel_pytree(res)[
+                0
+            ]  # `res` has shape (dim + dim * dim + ..., )
     return res
 
 
