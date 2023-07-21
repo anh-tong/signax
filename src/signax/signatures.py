@@ -116,10 +116,10 @@ def _signature(
             jnp.concatenate([first[None, ...], rest], axis=0)
             for first, rest in zip(exp_term, stacked)
         ]
-        # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+        # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
         if flatten:
             res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
+            # now `res` has shape (path_len -1, dim + dim * dim + ...)
     else:
         res = carry
         # `res` has shape [(dim,), (dim, dim), ...]
@@ -201,16 +201,18 @@ def _signature_chunked(
                 jnp.concatenate([bulk, rest], axis=0)
                 for bulk, rest in zip(bulk_signature, combined)
             ]
-            # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+            # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
             if flatten:
                 res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-                # now `res` has shape (patch_len -1, dim + dim * dim + ...)
+                # now `res` has shape (path_len -1, dim + dim * dim + ...)
             return res
 
-        # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+        # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
         if flatten:
-            res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
+            bulk_signature = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(
+                bulk_signature
+            )
+            # now `res` has shape (path_len -1, dim + dim * dim + ...)
 
         return bulk_signature
 
@@ -259,24 +261,27 @@ def logsignature(
         converter = signature_to_logsignature
     if path.ndim == 2:
         res: Array | list[Array] = converter(sig)
+        length, dim = path.shape
+        batch = 1
     elif path.ndim == 3:
         res = jax.vmap(converter)(sig)
+        batch, length, dim = path.shape
     else:  # should never happen -- caught by signature
         msg = "You should never see this message (shape logic is handled by signax.signature). Please report this as a bug!"
         raise ValueError(msg)
     if flatten:
         if stream:
             if path.ndim == 3:
-                # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]*batch_size
-                res = jax.vmap(jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0]))(res)
+                # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]*batch_size
+                res = flatten_util.ravel_pytree(res)[0].reshape(batch, length - 1, -1)
             else:
-                # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+                # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
                 res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
+            # now `res` has shape (path_len -1, dim + dim * dim + ...) or (batch, path_len -1, dim + dim * dim + ...)
         else:
             res = flatten_util.ravel_pytree(res)[0]
             if path.ndim == 3:
-                res = jnp.reshape(res, (path.shape[0], -1))
+                res = jnp.reshape(res, (batch, -1))
     return res
 
 
