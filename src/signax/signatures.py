@@ -124,9 +124,8 @@ def _signature(
         res = carry
         # `res` has shape [(dim,), (dim, dim), ...]
         if flatten:
-            res = flatten_util.ravel_pytree(res)[
-                0
-            ]  # `res` has shape (dim + dim * dim + ..., )
+            res = flatten_util.ravel_pytree(res)[0]
+            # `res` has shape (dim + dim * dim + ..., )
     return res
 
 
@@ -202,12 +201,16 @@ def _signature_chunked(
                 jnp.concatenate([bulk, rest], axis=0)
                 for bulk, rest in zip(bulk_signature, combined)
             ]
+            # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
             if flatten:
-                res = flatten_util.ravel_pytree(res)[0]
+                res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
+                # now `res` has shape (patch_len -1, dim + dim * dim + ...)
             return res
 
+        # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
         if flatten:
-            bulk_signature = flatten_util.ravel_pytree(bulk_signature)[0]
+            res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
+            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
 
         return bulk_signature
 
@@ -262,9 +265,18 @@ def logsignature(
         msg = "You should never see this message (shape logic is handled by signax.signature). Please report this as a bug!"
         raise ValueError(msg)
     if flatten:
-        res = flatten_util.ravel_pytree(res)[0]
-        if path.ndim == 3:
-            res = jnp.reshape(res, (path.shape[0], -1))
+        if stream:
+            if path.ndim == 3:
+                # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]*batch_size
+                res = jax.vmap(jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0]))(res)
+            else:
+                # here `res` has shape [(patch_len - 1, dim), (patch_len - 1, dim, dim), ...]
+                res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
+            # now `res` has shape (patch_len -1, dim + dim * dim + ...)
+        else:
+            res = flatten_util.ravel_pytree(res)[0]
+            if path.ndim == 3:
+                res = jnp.reshape(res, (path.shape[0], -1))
     return res
 
 
