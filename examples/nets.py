@@ -6,10 +6,14 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
+from jax import flatten_util
 
 from signax import signature, signature_combine
 from signax.module import SignatureTransform
-from signax.utils import flatten
+
+
+def flatten(x):
+    return flatten_util.ravel_pytree(x)[0]
 
 
 def _make_convs(input_size: int, layer_sizes, kernel_size, *, key):
@@ -144,12 +148,7 @@ class Window(eqx.Module):
 
         # output is a tensor algebra which is a list of `jnp.ndarray`
         # size of output: [(n, dim), (n, dim, dim,), (n, dim, dim, dim), ...]
-
-        def _signature(x):
-            ta = signature(x, self.signature_depth)
-            return flatten(ta)
-
-        output = jax.vmap(_signature)(output)
+        output = jax.vmap(signature)(output)
 
         return output
 
@@ -197,7 +196,7 @@ class WindowAdjusted(eqx.Module):
         )
 
         # signature of the first window
-        init = signature(x[: self.length], self.signature_depth)
+        init = signature(x[: self.length], self.signature_depth, flatten=False)
 
         def f(carry, i):
             """
@@ -210,7 +209,7 @@ class WindowAdjusted(eqx.Module):
                 start_indices=(i - 1, 0),
                 slice_sizes=(self.adjusted_length + 1, dim),
             )
-            sig = signature(current_x, self.signature_depth)
+            sig = signature(current_x, self.signature_depth, flatten=False)
             out = signature_combine(carry, sig)
 
             # carry the current signature to the next iteration
