@@ -97,8 +97,6 @@ def test_signature(stream):
 
     path = rng.standard_normal((length, dim))
     jax_signature = signature(path, depth=depth, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
 
     torch_path = torch.tensor(path)
     torch_signature = signatory.signature(

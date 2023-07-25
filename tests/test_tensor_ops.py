@@ -134,7 +134,7 @@ def test_log():
     length, dim = 3, 2
     path = rng.standard_normal((length, dim))
     jax_path = jnp.array(path)
-    jax_signature = signature(jax_path, depth)
+    jax_signature = signature(jax_path, depth, flatten=False)
     jax_logsignature = signature_to_logsignature(jax_signature)
     jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
 

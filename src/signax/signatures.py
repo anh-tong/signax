@@ -28,7 +28,7 @@ def signature(
     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
     depth: int,
     stream: bool = False,
-    flatten: bool = False,
+    flatten: bool = True,
     num_chunks: int = 1,
 ) -> list[Array] | Array:
     """
@@ -67,15 +67,7 @@ def signature(
     if path.ndim == 2:
         return sig_fun(path)  # regular case
     if path.ndim == 3:  # batch case (mimics signatory)
-        if flatten:
-            return jax.vmap(sig_fun)(path)
-        # if not flattening, use list comprehension since vmap cant handle list outputs
-        # could also use scan here (my basic attempt didn't iterate over batch dimension correctly)
-        if path.shape[0] > 100:
-            msg = "Batched signature computation not called with flatten=True. This may be slow (Python for loop)."
-            logger.warning(msg)
-        return [sig_fun(path[i]) for i in range(path.shape[0])]
-
+        return jax.vmap(sig_fun)(path)
     msg = f"Path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
     raise ValueError(msg)
 
@@ -162,9 +154,9 @@ def _signature_chunked(
     path_bulk = jnp.concatenate([basepoints[:, None, :], path_bulk], axis=1)
     path_remainder = path[bulk_length - 1 :]
 
-    multi_signatures = jax.vmap(partial(_signature, depth=depth, stream=stream))(
-        path_bulk
-    )
+    multi_signatures = jax.vmap(
+        partial(_signature, depth=depth, stream=stream, flatten=False)
+    )(path_bulk)
 
     if stream:
         # `multi_signature` in a form of [(chunk, chunk_len, dim), (chunk, chunk_len, dim, dim), ...]
@@ -193,19 +185,16 @@ def _signature_chunked(
         ]
 
         if remainder != 0:
-            remainder_signature = signature(path_remainder, depth, stream)
+            remainder_signature = _signature(
+                path_remainder, depth, stream, flatten=False
+            )
             combined = jax.vmap(partial(signature_combine, last_sig))(
                 remainder_signature
             )
-            res = [
+            bulk_signature = [
                 jnp.concatenate([bulk, rest], axis=0)
                 for bulk, rest in zip(bulk_signature, combined)
             ]
-            # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
-            if flatten:
-                res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-                # now `res` has shape (path_len -1, dim + dim * dim + ...)
-            return res
 
         # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
         if flatten:
@@ -222,7 +211,7 @@ def _signature_chunked(
 
     if remainder != 0:
         # compute the signature of the remainder chunk
-        remainder_signature = signature(path_remainder, depth, stream)
+        remainder_signature = _signature(path_remainder, depth, stream, flatten=False)
         # combine with the bulk signature
         res = signature_combine(bulk_signature, remainder_signature)
         if flatten:
@@ -241,7 +230,7 @@ def logsignature(
     depth: int,
     stream: bool = False,
     num_chunks: int = 1,
-    flatten: bool = False,
+    flatten: bool = True,
 ) -> list[Array] | Array:
     """Compute the log of the signature of a path.
 
@@ -252,36 +241,42 @@ def logsignature(
         num_chunks: number of chunks to divide the path into
         flatten: whether to flatten the output
     """
+    log_sig_fun = partial(
+        _logsignature,
+        depth=depth,
+        stream=stream,
+        num_chunks=num_chunks,
+        flatten=flatten,
+    )
+    if path.ndim == 2:
+        return log_sig_fun(path)
+    if path.ndim == 3:
+        return jax.vmap(log_sig_fun)(path)
+    msg = f"Path must be of shape (path_length, path_dim) or (batch, path_length, path_dim), got {path.shape}"
+    raise ValueError(msg)
+
+
+def _logsignature(
+    path: Float[Array, "path_len dim"],
+    depth: int,
+    stream: bool = False,
+    num_chunks: int = 1,
+    flatten: bool = False,
+) -> list[Array] | Array:
     sig = signature(
         path, depth=depth, stream=stream, num_chunks=num_chunks, flatten=False
     )
     if stream:
         converter = jax.vmap(signature_to_logsignature)
+        res = converter(sig)
+        if flatten:
+            res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
     else:
         converter = signature_to_logsignature
-    if path.ndim == 2:
-        res: Array | list[Array] = converter(sig)
-        length, dim = path.shape
-        batch = 1
-    elif path.ndim == 3:
-        res = jax.vmap(converter)(sig)
-        batch, length, dim = path.shape
-    else:  # should never happen -- caught by signature
-        msg = "You should never see this message (shape logic is handled by signax.signature). Please report this as a bug!"
-        raise ValueError(msg)
-    if flatten:
-        if stream:
-            if path.ndim == 3:
-                # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]*batch_size
-                res = flatten_util.ravel_pytree(res)[0].reshape(batch, length - 1, -1)
-            else:
-                # here `res` has shape [(path_len - 1, dim), (path_len - 1, dim, dim), ...]
-                res = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(res)
-            # now `res` has shape (path_len -1, dim + dim * dim + ...) or (batch, path_len -1, dim + dim * dim + ...)
-        else:
+        res = converter(sig)
+        if flatten:
             res = flatten_util.ravel_pytree(res)[0]
-            if path.ndim == 3:
-                res = jnp.reshape(res, (batch, -1))
+
     return res
 
 
