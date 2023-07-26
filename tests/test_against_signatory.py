@@ -121,5 +121,14 @@ def test_logsignature(stream):
         torch_path[None, ...], depth=depth, stream=stream
     )
     torch_signature = jnp.array(torch_signature.numpy())
+    assert jnp.allclose(jax_signature, torch_signature)
 
+    # with batch
+    batch_size = 20
+    path = rng.standard_normal((batch_size, length, dim))
+    jax_signature = logsignature(path, depth=depth, stream=stream, flatten=True)
+
+    torch_path = torch.tensor(path)
+    torch_signature = signatory.logsignature(torch_path, depth=depth, stream=stream)
+    torch_signature = jnp.array(torch_signature.numpy())
     assert jnp.allclose(jax_signature, torch_signature)
