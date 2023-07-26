@@ -6,7 +6,7 @@ import pytest
 from jax import flatten_util
 from numpy.random import default_rng
 
-from signax import signature
+from signax import logsignature, signature
 
 rng = default_rng()
 
@@ -76,3 +76,8 @@ def test_invalid_path_shape():
         signature(jnp.ones((10, 10, 10, 10)), 2)
     with pytest.raises(ValueError, match="Path must be of shape"):
         signature(jnp.ones((10,)), 2)
+
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        logsignature(jnp.ones((10, 10, 10, 10)), 2)
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        logsignature(jnp.ones((10,)), 2)
