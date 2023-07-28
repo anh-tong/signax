@@ -5,7 +5,6 @@ __all__ = (
     "lyndon_words",
     "compress",
     "unravel_signature",
-    "flatten",
     "term_at",
 )
 
@@ -91,12 +90,6 @@ def compress(
     """
 
     return [index_select(term, index) for term, index in zip(input, indices)]
-
-
-@jax.jit
-def flatten(signature: list[jax.Array]) -> jax.Array:
-    flattened_terms = tuple(map(jnp.ravel, signature))
-    return jnp.concatenate(flattened_terms)
 
 
 @partial(jax.jit, static_argnums=[0, 1])

@@ -3,16 +3,10 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 import pytest
-import signatory
-import torch
+from jax import flatten_util
 from numpy.random import default_rng
 
-from signax import (
-    logsignature,
-    multi_signature_combine,
-    signature,
-    signature_batch,
-)
+from signax import logsignature, signature
 
 rng = default_rng()
 
@@ -26,111 +20,64 @@ def test_signature_1d_path():
     path = rng.standard_normal((length, 1))
     signature(path, depth)
 
-    path = rng.standard_normal(length)
-    signature(path, depth)
 
-
-def test_multi_signature_combine():
-    batch_size = 5
-    dim = 5
-    signatures = [
-        rng.standard_normal((batch_size, dim)),
-        rng.standard_normal((batch_size, dim, dim)),
-        rng.standard_normal((batch_size, dim, dim, dim)),
-    ]
-
-    jax_signatures = [jnp.array(x) for x in signatures]
-
-    jax_output = multi_signature_combine(jax_signatures)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
-
-    torch_signatures = []
-    for i in range(batch_size):
-        tensors = [torch.tensor(x[i]) for x in signatures]
-        current = torch.cat([t.flatten() for t in tensors])
-        current = current[None, :]
-        torch_signatures.append(current)
-
-    torch_output = signatory.multi_signature_combine(
-        torch_signatures, input_channels=dim, depth=len(signatures)
-    )
-    torch_output = jnp.array(torch_output.numpy())
-    assert jnp.allclose(jax_output, torch_output)
-
-
-@pytest.mark.parametrize("stream", [True, False])
-def test_signature_batch(stream):
+@pytest.mark.parametrize("flatten", [True, False])
+def test_signature_size(flatten):
+    length, channels = 4, 3
     depth = 3
-
-    # no remainder case
-    length = 1001
-    dim = 5
-    n_chunks = 10
-
-    path = rng.standard_normal((length, dim))
-    jax_signature = signature_batch(path, depth, n_chunks, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
-
-    torch_path = torch.tensor(path)
-    torch_signature = signatory.signature(
-        torch_path[None, ...], depth=depth, stream=stream
-    )
-    torch_signature = jnp.array(torch_signature.numpy())
-
-    assert jnp.allclose(jax_signature, torch_signature)
-
-    # has remainder case
-    length = 1005
-    path = rng.standard_normal((length, dim))
-
-    jax_signature = signature_batch(path, depth, n_chunks, stream)
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
-
-    torch_path = torch.tensor(path)
-    torch_signature = signatory.signature(
-        torch_path[None, ...], depth=depth, stream=stream
-    )
-    torch_signature = jnp.array(torch_signature.numpy())
-
-    assert jnp.allclose(jax_signature, torch_signature)
+    corpus = jnp.ones((length, channels))
+    sig = signature(corpus, depth=depth, flatten=flatten)
+    if flatten:
+        assert sig.shape == ((channels ** (depth + 1) - 1) / (channels - 1) - 1,)
+    else:
+        assert len(sig) == depth
+        for i, s in enumerate(sig):
+            assert s.shape == (channels,) * (i + 1)
 
 
-@pytest.mark.parametrize("stream", [True, False])
-def test_signature(stream):
+@pytest.mark.parametrize("flatten", [True, False])
+def test_signature_size_batch(flatten):
+    batch, length, channels = 2, 4, 3
     depth = 3
-    length = 100
-    dim = 5
-
-    path = rng.standard_normal((length, dim))
-    jax_signature = signature(path, depth=depth, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
-
-    torch_path = torch.tensor(path)
-    torch_signature = signatory.signature(
-        torch_path[None, ...], depth=depth, stream=stream
-    )
-    torch_signature = jnp.array(torch_signature.numpy())
-
-    assert jnp.allclose(jax_signature, torch_signature)
+    corpus = rng.standard_normal((batch, length, channels))
+    sig = signature(corpus, depth=depth, flatten=flatten)
+    if flatten:
+        # shape of sig is a single tensor (batch, channels + channels ** 2 + channels **3)
+        assert len(sig) == batch
+        assert sig.shape == (batch, (channels ** (depth + 1) - 1) / (channels - 1) - 1)
+    else:
+        # sig is a list of tensors
+        #   (batch, channels), (batch, channels, channels), (batch, channels, channels)
+        assert len(sig) == depth
+        for i, s in enumerate(sig):
+            assert s.shape == (batch,) + (channels,) * (i + 1)
 
 
-@pytest.mark.parametrize("stream", [True, False])
-def test_logsignature(stream):
-    depth = 3
-    length = 100
-    dim = 5
+def test_signature_flatten():
+    length, channels = 4, 3
+    corpus = rng.standard_normal((length, channels))
+    sig = signature(corpus, depth=6, flatten=True)
+    sig2 = signature(corpus, depth=6, flatten=False)
+    tree = flatten_util.ravel_pytree(sig2)[0]
+    assert jnp.all(sig == tree)
 
-    path = rng.standard_normal((length, dim))
-    jax_signature = logsignature(path, depth=depth, stream=stream)
-    ravel_fn = jax.vmap(jnp.ravel) if stream else jnp.ravel
-    jax_signature = jnp.concatenate([ravel_fn(x) for x in jax_signature], axis=-1)
 
-    torch_path = torch.tensor(path)
-    torch_signature = signatory.logsignature(
-        torch_path[None, ...], depth=depth, stream=stream
-    )
-    torch_signature = jnp.array(torch_signature.numpy())
+def test_signature_flatten_batch():
+    batch, length, channels = 2, 4, 3
+    corpus = rng.standard_normal((batch, length, channels))
+    sig = signature(corpus, depth=6, flatten=True)
+    sig2 = signature(corpus, depth=6, flatten=False)
+    tree = jax.vmap(lambda x: flatten_util.ravel_pytree(x)[0])(sig2).reshape(batch, -1)
+    assert jnp.all(sig == tree)
 
-    assert jnp.allclose(jax_signature, torch_signature)
+
+def test_invalid_path_shape():
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        signature(jnp.ones((10, 10, 10, 10)), 2)
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        signature(jnp.ones((10,)), 2)
+
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        logsignature(jnp.ones((10, 10, 10, 10)), 2)
+    with pytest.raises(ValueError, match="Path must be of shape"):
+        logsignature(jnp.ones((10,)), 2)
