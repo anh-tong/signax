@@ -12,8 +12,8 @@ from __future__ import annotations
 # -- Project information -----------------------------------------------------
 
 project = "signax"
-copyright = "2023, Anh Tong"
-author = "Anh Tong"
+copyright = "2023, Signax authors"
+author = "Signax authors"
 
 
 # -- General configuration ---------------------------------------------------
@@ -22,18 +22,19 @@ author = "Anh Tong"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "myst_parser",
+    # "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
+    "myst_nb",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = []
 
 # Include both markdown and rst files
-source_suffix = [".rst", ".md"]
+source_suffix = [".rst", ".md", ".ipynb"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -55,7 +56,19 @@ html_static_path: list[str] = []
 
 
 # -- Extension configuration -------------------------------------------------
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
+myst_heading_anchors = 3  # auto-generate 3 levels of heading anchors
+myst_enable_extensions = ["dollarmath"]
+nb_execution_mode = "force"
+nb_execution_allow_errors = False
+nb_merge_streams = True
+
+# Notebook cell execution timeout; defaults to 30.
+nb_execution_timeout = 100
+
+# List of patterns, relative to source directory, that match notebook
+# files that will not be executed.
+nb_execution_excludepatterns = [
+    "examples/compare.*"
+    # this example takes a bit long
+    "examples/generative_model.*"
 ]
