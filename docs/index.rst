@@ -51,8 +51,7 @@ Get Started
     # this is done via `jax.vmap`
     batch_size = 20
     path = jrandom.normal(shape=(batch_size, length, dim), key=key)
-    output = jax.vmap(lambda x: signax.signature(x, depth))(path)
-
+    output = signax.signature(path, depth)
 
 .. toctree::
    :hidden:

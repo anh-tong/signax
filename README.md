@@ -48,10 +48,9 @@ output = signax.signature(path, depth)
 # output is a list of array representing tensor algebra
 
 # compute signature for batches (multiple) of paths
-# this is done via `jax.vmap`
-batch_size = 20
 path = jrandom.normal(shape=(batch_size, length, dim), key=key)
-output = jax.vmap(lambda x: signax.signature(x, depth))(path)
+# new signax API can handle this case two
+output = signax.signature(x, depth)
 ```
 
 Integrate with the [equinox](https://github.com/patrick-kidger/equinox) library
