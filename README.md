@@ -50,7 +50,7 @@ output = signax.signature(path, depth)
 # compute signature for batches (multiple) of paths
 path = jrandom.normal(shape=(batch_size, length, dim), key=key)
 # new signax API can handle this case two
-output = signax.signature(x, depth)
+output = signax.signature(path, depth)
 ```
 
 Integrate with the [equinox](https://github.com/patrick-kidger/equinox) library
