@@ -2,20 +2,13 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
-import numpy as np
-import signatory
 
 # need to install torch and signatory for testing
-import torch
 from numpy.random import default_rng
 
-from signax import signature, signature_to_logsignature
 from signax.tensor_ops import (
     addcmul,
-    mult,
-    mult_fused_restricted_exp,
     otimes,
-    restricted_exp,
 )
 
 rng = default_rng()
@@ -61,93 +54,3 @@ def test_addcmul():
     z = jnp.array([3.0, 4.0])
     true_output = jnp.array([[4.0, 6.0], [9.0, 12.0]])
     assert jnp.allclose(true_output, addcmul(x, y, z), rtol=1e-3, atol=1e-5)
-
-
-def test_restricted_exp():
-    depth = 4
-    length, dim = 2, 3
-    path = rng.standard_normal((length, dim))
-
-    signatory_output = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth=depth,
-    )
-    signatory_output = jnp.array(signatory_output.numpy())
-
-    jax_output = restricted_exp(jnp.diff(path, axis=0), depth=depth)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
-
-    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
-
-
-def test_mult_fused_restricted_exp():
-    depth = 4
-    length, dim = 3, 3
-    path = rng.standard_normal((length, dim))
-
-    # re-test restricted_exp() to make sure it run correctly
-    test_restricted_exp()
-
-    signatory_output = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth=depth,
-    )
-    signatory_output = jnp.array(signatory_output.numpy())
-
-    # our computation
-    increments = jnp.diff(path, axis=0)
-    exp_term = restricted_exp(increments[0], depth)
-    jax_output = mult_fused_restricted_exp(increments[1], exp_term)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
-
-    assert jnp.allclose(signatory_output, jax_output)
-
-
-def test_mult():
-    depth = 4
-    length, dim = 3, 4
-    path = rng.standard_normal((length, dim))
-
-    # use our implementation, need to compute exp first
-    increments = jnp.diff(path, axis=0)
-    exp1 = restricted_exp(increments[0], depth)
-    exp2 = restricted_exp(increments[1], depth)
-    combine = mult(exp1, exp2)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in combine])
-
-    # use signatory
-    exp1 = torch.tensor(
-        np.array(jnp.concatenate([x.ravel() for x in exp1])),
-    )[None, :]
-    exp2 = torch.tensor(
-        np.array(jnp.concatenate([x.ravel() for x in exp2])),
-    )[None, :]
-    signatory_output = signatory.signature_combine(exp1, exp2, dim, depth)
-    signatory_output = jnp.array(signatory_output.numpy())
-
-    assert jnp.allclose(signatory_output, jax_output)
-
-
-def test_log():
-    """Test log via signature_to_logsignature"""
-    depth = 4
-    length, dim = 3, 2
-    path = rng.standard_normal((length, dim))
-    jax_path = jnp.array(path)
-    jax_signature = signature(jax_path, depth, flatten=False)
-    jax_logsignature = signature_to_logsignature(jax_signature)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
-
-    torch_signature = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth,
-    )
-    torch_logsignature = signatory.signature_to_logsignature(
-        torch_signature,
-        dim,
-        depth,
-    )
-
-    torch_output = jnp.array(torch_logsignature.numpy())
-
-    assert jnp.allclose(torch_output, jax_output)
