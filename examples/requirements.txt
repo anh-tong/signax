@@ -1,2 +1,2 @@
 matplotlib
-optax
+optax==0.1.7  # higher version does not support Python 3.8
