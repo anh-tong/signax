@@ -160,6 +160,7 @@ Thumbs.db
 # notebooks
 Untitiled.ipynb
 t.ipynb
+test/test.ipynb
 
 # jupyter execution from build doc
 /jupyter_execute
