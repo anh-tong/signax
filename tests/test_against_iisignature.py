@@ -8,6 +8,7 @@ import pytest
 from numpy.random import default_rng
 
 from signax import logsignature, signature
+from signax.utils import compress, lyndon_words, unravel_signature
 
 rng = default_rng()
 
@@ -39,7 +40,19 @@ def test_logsignature(depth, length, dim, stream):
     batch_size = 10
     path = rng.standard_normal((batch_size, length, dim))
     jax_logsignature = logsignature(path, depth=depth, stream=stream, flatten=True)
-    s = iisignature.prepare(dim, depth, "O")
-    iis_logsignature = iisignature.logsig(np.asarray(path), s)
-    iis_logsignature = jnp.asarray(iis_logsignature)
+
+    # get expanded version of log signature
+    s = iisignature.prepare(dim, depth, "x")
+    iis_logsignature = iisignature.logsig(np.asarray(path), s, "x")
+
+    def _compress(expanded_log_signature):
+        # convert expanded array as list of arrays
+        expanded_log_signature = unravel_signature(expanded_log_signature, dim, depth)
+        indices = lyndon_words(depth, dim)
+        compressed = compress(expanded_log_signature, indices)
+        compressed = jnp.concatenate(compressed)
+        return compressed
+
+    iis_logsignature = jax.vmap(_compress)(iis_logsignature)
+
     assert jnp.allclose(jax_logsignature, iis_logsignature, atol=5e-1, rtol=5e-1)
