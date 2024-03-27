@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 from numpy.random import default_rng
 
+from signax import signature, signature_to_logsignature
 from signax.tensor_ops import (
     addcmul,
     mult,
@@ -13,6 +14,7 @@ from signax.tensor_ops import (
     otimes,
     restricted_exp,
 )
+from signax.utils import compress, lyndon_words, unravel_signature
 
 rng = default_rng()
 
@@ -110,26 +112,27 @@ def test_mult():
     assert jnp.allclose(iis_signature, jax_output)
 
 
-# def test_log():
-#     """Test log via signature_to_logsignature"""
-#     depth = 4
-#     length, dim = 3, 2
-#     path = rng.standard_normal((length, dim))
-#     jax_path = jnp.array(path)
-#     jax_signature = signature(jax_path, depth, flatten=False)
-#     jax_logsignature = signature_to_logsignature(jax_signature)
-#     jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
+def test_log():
+    """Test log via signature_to_logsignature"""
+    depth = 4
+    length, dim = 3, 2
+    path = rng.standard_normal((length, dim))
+    jax_path = jnp.array(path)
+    jax_signature = signature(jax_path, depth, flatten=False)
+    jax_logsignature = signature_to_logsignature(jax_signature)
+    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
 
-#     torch_signature = signatory.signature(
-#         torch.tensor(path)[None, ...],
-#         depth,
-#     )
-#     torch_logsignature = signatory.signature_to_logsignature(
-#         torch_signature,
-#         dim,
-#         depth,
-#     )
+    s = iisignature.prepare(dim, depth, "x")
+    iis_logsignature = iisignature.logsig(np.asarray(path), s, "x")
 
-#     torch_output = jnp.array(torch_logsignature.numpy())
+    def _compress(expanded_log_signature):
+        # convert expanded array as list of arrays
+        expanded_log_signature = unravel_signature(expanded_log_signature, dim, depth)
+        indices = lyndon_words(depth, dim)
+        compressed = compress(expanded_log_signature, indices)
+        compressed = jnp.concatenate(compressed)
+        return compressed
 
-#     assert jnp.allclose(torch_output, jax_output)
+    iis_logsignature = _compress(iis_logsignature)
+
+    assert jnp.allclose(iis_logsignature, jax_output)
