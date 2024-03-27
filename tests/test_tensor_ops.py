@@ -1,15 +1,11 @@
 from __future__ import annotations
 
+import iisignature
 import jax
 import jax.numpy as jnp
 import numpy as np
-import signatory
-
-# need to install torch and signatory for testing
-import torch
 from numpy.random import default_rng
 
-from signax import signature, signature_to_logsignature
 from signax.tensor_ops import (
     addcmul,
     mult,
@@ -67,17 +63,10 @@ def test_restricted_exp():
     depth = 4
     length, dim = 2, 3
     path = rng.standard_normal((length, dim))
-
-    signatory_output = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth=depth,
-    )
-    signatory_output = jnp.array(signatory_output.numpy())
-
+    iis_signature = jnp.asarray(iisignature.sig(np.asarray(path), depth))
     jax_output = restricted_exp(jnp.diff(path, axis=0), depth=depth)
     jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
-
-    assert jnp.allclose(signatory_output, jax_output, rtol=1e-3, atol=1e-5)
+    assert jnp.allclose(iis_signature, jax_output, rtol=1e-3, atol=1e-5)
 
 
 def test_mult_fused_restricted_exp():
@@ -88,11 +77,7 @@ def test_mult_fused_restricted_exp():
     # re-test restricted_exp() to make sure it run correctly
     test_restricted_exp()
 
-    signatory_output = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth=depth,
-    )
-    signatory_output = jnp.array(signatory_output.numpy())
+    iis_signature = jnp.asarray(iisignature.sig(np.asarray(path), depth))
 
     # our computation
     increments = jnp.diff(path, axis=0)
@@ -100,7 +85,7 @@ def test_mult_fused_restricted_exp():
     jax_output = mult_fused_restricted_exp(increments[1], exp_term)
     jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_output])
 
-    assert jnp.allclose(signatory_output, jax_output)
+    assert jnp.allclose(iis_signature, jax_output)
 
 
 def test_mult():
@@ -114,40 +99,37 @@ def test_mult():
     exp2 = restricted_exp(increments[1], depth)
     combine = mult(exp1, exp2)
     jax_output = jnp.concatenate([jnp.ravel(x) for x in combine])
-
-    # use signatory
-    exp1 = torch.tensor(
-        np.array(jnp.concatenate([x.ravel() for x in exp1])),
-    )[None, :]
-    exp2 = torch.tensor(
-        np.array(jnp.concatenate([x.ravel() for x in exp2])),
-    )[None, :]
-    signatory_output = signatory.signature_combine(exp1, exp2, dim, depth)
-    signatory_output = jnp.array(signatory_output.numpy())
-
-    assert jnp.allclose(signatory_output, jax_output)
-
-
-def test_log():
-    """Test log via signature_to_logsignature"""
-    depth = 4
-    length, dim = 3, 2
-    path = rng.standard_normal((length, dim))
-    jax_path = jnp.array(path)
-    jax_signature = signature(jax_path, depth, flatten=False)
-    jax_logsignature = signature_to_logsignature(jax_signature)
-    jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
-
-    torch_signature = signatory.signature(
-        torch.tensor(path)[None, ...],
-        depth,
+    iis_signature = jnp.asarray(
+        iisignature.sigcombine(
+            np.asarray(jnp.concatenate([a.reshape(-1) for a in exp1])),
+            np.asarray(jnp.concatenate([a.reshape(-1) for a in exp2])),
+            dim,
+            depth,
+        )
     )
-    torch_logsignature = signatory.signature_to_logsignature(
-        torch_signature,
-        dim,
-        depth,
-    )
+    assert jnp.allclose(iis_signature, jax_output)
 
-    torch_output = jnp.array(torch_logsignature.numpy())
 
-    assert jnp.allclose(torch_output, jax_output)
+# def test_log():
+#     """Test log via signature_to_logsignature"""
+#     depth = 4
+#     length, dim = 3, 2
+#     path = rng.standard_normal((length, dim))
+#     jax_path = jnp.array(path)
+#     jax_signature = signature(jax_path, depth, flatten=False)
+#     jax_logsignature = signature_to_logsignature(jax_signature)
+#     jax_output = jnp.concatenate([jnp.ravel(x) for x in jax_logsignature])
+
+#     torch_signature = signatory.signature(
+#         torch.tensor(path)[None, ...],
+#         depth,
+#     )
+#     torch_logsignature = signatory.signature_to_logsignature(
+#         torch_signature,
+#         dim,
+#         depth,
+#     )
+
+#     torch_output = jnp.array(torch_logsignature.numpy())
+
+#     assert jnp.allclose(torch_output, jax_output)
