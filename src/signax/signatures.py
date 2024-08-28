@@ -333,6 +333,6 @@ def multi_signature_combine(signatures: list[Array]) -> list[Array]:
         elems=signatures,
     )
     # return the last index after associative scan
-    result = jax.tree_map(lambda x: x[-1], result)
+    result = jax.tree_util.tree_map(lambda x: x[-1], result)
 
     return result
