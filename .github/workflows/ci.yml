@@ -72,7 +72,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-
   dist:
     needs: [pre-commit]
     name: Distribution build
