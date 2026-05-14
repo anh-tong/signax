@@ -120,10 +120,11 @@ def term_at(
     dim: int,
     term_i: int,
 ) -> jax.Array:
-    start, prev_offset = _get_depth(dim, term_i)
+    prev_offset, start = _get_depth(dim, term_i)
 
     return cast(
-        jax.Array, _term_at(flattened_signature, dim, term_i, start, prev_offset * dim)
+        jax.Array,
+        _term_at(flattened_signature, dim, term_i, int(start), int(prev_offset) * dim),
     )
 
 

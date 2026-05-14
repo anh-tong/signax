@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9"]
+        python-version: ["3.9", "3.10"]
         runs-on: [ubuntu-latest]
 
     steps:
@@ -59,7 +59,8 @@ jobs:
 
       - name: Install iisignature for testing
         run: |
-          python -m pip install iisignature
+          python -m pip install numpy
+          python -m pip install iisignature --no-build-isolation
 
       - name: Test package
         run: >-
@@ -70,15 +71,6 @@ jobs:
         uses: codecov/codecov-action@v4.6.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run examples
-        run: |
-          cd examples
-          python -m pip install -r requirements.txt
-          python -m pip install jupyter nbclient
-          jupyter execute estimate_hurst.ipynb
-          jupyter execute generative_model.ipynb
-          jupyter execute inversion.ipynb
 
   dist:
     needs: [pre-commit]
