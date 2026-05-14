@@ -30,6 +30,54 @@ def addcmul(x: jax.Array, y: jax.Array, z: jax.Array) -> jax.Array:
     return x + otimes(y, z)
 
 
+_UNROLL_THRESHOLD = 5
+
+
+def _restricted_exp_unrolled(input: jax.Array, depth: int) -> list[jax.Array]:
+    """Python-unrolled variant; generates a flat XLA chain at trace time."""
+    ret = [input]
+    for i in range(2, depth + 1):
+        ret.append(otimes(ret[-1], input / i))
+    return ret
+
+
+def _restricted_exp_flat(input: jax.Array, depth: int) -> list[jax.Array]:
+    """Flat-buffer variant for depth > _UNROLL_THRESHOLD.
+
+    Stores all depth levels in one contiguous 1-D JAX array, then extracts
+    each level at the end.  Slice indices are Python ints (dim and depth are
+    both concrete at JIT-trace time), so no dynamic indexing overhead is
+    incurred.
+
+    Note: a true single-construct XLA loop (jax.lax.fori_loop) would further
+    reduce the compiled graph node count but requires a fixed-shape carry,
+    which is incompatible with the per-level size growth dim^1 … dim^depth.
+    The flat-buffer layout at least makes the memory pattern explicit and
+    provides a direct foundation for a future padded-carry implementation.
+    """
+    dim = input.shape[0]
+    sizes: list[int] = [dim**d for d in range(1, depth + 1)]
+    offsets: list[int] = []
+    off = 0
+    for s in sizes:
+        offsets.append(off)
+        off += s
+
+    flat = jnp.zeros(off, dtype=input.dtype)
+    flat = flat.at[offsets[0] : offsets[0] + sizes[0]].set(input)
+
+    for d in range(1, depth):
+        prev_flat = flat[offsets[d - 1] : offsets[d - 1] + sizes[d - 1]]
+        prev = prev_flat.reshape((dim,) * d)
+        nxt = otimes(prev, input / (d + 1))
+        flat = flat.at[offsets[d] : offsets[d] + sizes[d]].set(nxt.ravel())
+
+    return [
+        flat[offsets[d] : offsets[d] + sizes[d]].reshape((dim,) * (d + 1))
+        for d in range(depth)
+    ]
+
+
 @partial(jax.jit, static_argnames="depth")
 def restricted_exp(input: jax.Array, depth: int) -> list[jax.Array]:
     """Restricted exponentiate
@@ -42,10 +90,9 @@ def restricted_exp(input: jax.Array, depth: int) -> list[jax.Array]:
     Return:
         A list of `jnp.ndarray` contains tensors
     """
-    ret = [input]
-    for i in range(2, depth + 1):
-        ret.append(otimes(ret[-1], input / i))
-    return ret
+    if depth <= _UNROLL_THRESHOLD:
+        return _restricted_exp_unrolled(input, depth)
+    return _restricted_exp_flat(input, depth)
 
 
 @jax.jit

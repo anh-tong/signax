@@ -155,3 +155,4 @@ isort.required-imports = ["from __future__ import annotations"]
 "src/signax/signatures.py" = ["ARG001", "ARG005"]  # unused arguments
 "src/signax/module.py" = ["ARG002"]  # unused argument key in __call__ of Module (equinox)
 "examples/nets.py" = ["ARG002"]      # unused argument key in __call__ of Module (equinox)
+"src/signax/pallas_kernels.py" = ["ARG001", "ARG002"]  # kernel ref args read/written via side-effects
