@@ -29,7 +29,7 @@ def test_index_select():
     assert jnp.allclose(index_select(a, indices), true_output)
 
 
-@pytest.mark.parametrize("dim,depth", [(3, 3), (2, 4), (4, 2)])
+@pytest.mark.parametrize(("dim", "depth"), [(3, 3), (2, 4), (4, 2)])
 def test_term_at(dim, depth):
     length = 10
     path = rng.standard_normal((length, dim))
