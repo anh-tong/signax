@@ -60,7 +60,7 @@ jobs:
       - name: Install iisignature for testing
         run: |
           python -m pip install numpy
-          python -m pip install iisignature
+          python -m pip install iisignature --no-build-isolation
 
       - name: Test package
         run: >-
