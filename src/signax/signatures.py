@@ -38,7 +38,7 @@ def signature(
         path: size (length, dim) or (batch, length, dim)
         depth: signature is truncated at this depth
         stream: whether to handle `path` as a stream. Default is False
-        flatten: whether to flatten the output. Default is False
+        flatten: whether to flatten the output. Default is True
         num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into
         chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
 
