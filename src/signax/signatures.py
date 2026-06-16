@@ -23,13 +23,14 @@ from signax.tensor_ops import log, mult, mult_fused_restricted_exp, restricted_e
 logger = logging.getLogger(__name__)
 
 
-@partial(jax.jit, static_argnames=("num_chunks", "depth", "stream", "flatten"))
+@partial(jax.jit, static_argnames=("num_chunks", "depth", "stream", "flatten", "unroll"))
 def signature(
     path: Float[Array, "path_len dim"] | Float[Array, "batch path_len dim"],
     depth: int,
     stream: bool = False,
     flatten: bool = True,
     num_chunks: int = 1,
+    unroll: int | bool = 1,
 ) -> list[Array] | Array:
     """
     Compute the signature of a path. Automatically dispatches to vmap or not based on the shape of `path`.
@@ -41,6 +42,7 @@ def signature(
         flatten: whether to flatten the output. Default is False
         num_chunks: number of chunks to use. Default is 1. If > 1, path will be divided into
         chunks to compute signatures. Then, obtained signatures are combined (using Chen's identity).
+        unroll: the `unroll` parameter passed to `jax.lax.scan`. Default is 1
 
     Returns:
         If `stream` is `True`, this will return a list of `Array` in a form
@@ -60,9 +62,12 @@ def signature(
             depth=depth,
             stream=stream,
             flatten=flatten,
+            unroll=unroll,
         )
     else:
-        sig_fun = partial(_signature, depth=depth, stream=stream, flatten=flatten)
+        sig_fun = partial(
+            _signature, depth=depth, stream=stream, flatten=flatten, unroll=unroll
+        )
     # this is just to handle shape errors
     if path.ndim == 2:
         return sig_fun(path)  # regular case
@@ -72,12 +77,13 @@ def signature(
     raise ValueError(msg)
 
 
-@partial(jax.jit, static_argnames=["depth", "stream", "flatten"])
+@partial(jax.jit, static_argnames=["depth", "stream", "flatten", "unroll"])
 def _signature(
     path: Float[Array, "path_len dim"],
     depth: int,
     stream: bool = False,
     flatten: bool = False,
+    unroll: int | bool = 1,
 ) -> list[Array] | Array:
     """
     Compute the signature of a path. Optionally, divide the path into chunks to compute signatures
@@ -93,6 +99,7 @@ def _signature(
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
         If `stream` is `False`, this will return a list of `Array` in a form
             [(dim, ), (dim, dim), (dim, dim, dim), ...]
+        unroll: the `unroll` parameter passed to `jax.lax.scan`. Default is 1
     """
 
     path_increments = jnp.diff(path, axis=0)
@@ -102,7 +109,9 @@ def _signature(
         ret = mult_fused_restricted_exp(path_inc, carry)
         return ret, ret
 
-    carry, stacked = jax.lax.scan(f=_body, init=exp_term, xs=path_increments[1:])
+    carry, stacked = jax.lax.scan(
+        f=_body, init=exp_term, xs=path_increments[1:], unroll=unroll
+    )
     if stream:
         res = [
             jnp.concatenate([first[None, ...], rest], axis=0)
@@ -121,13 +130,14 @@ def _signature(
     return res
 
 
-@partial(jax.jit, static_argnames=["depth", "num_chunks", "stream", "flatten"])
+@partial(jax.jit, static_argnames=["depth", "num_chunks", "stream", "flatten", "unroll"])
 def _signature_chunked(
     path: Float[Array, "path_len dim"],
     depth: int,
     num_chunks: int,
     stream: bool = False,
     flatten: bool = False,
+    unroll: int | bool = 1
 ) -> list[Array]:
     """Compute signature for a long path by dividing it into chunks.
     Args:
@@ -136,6 +146,7 @@ def _signature_chunked(
         n_chunks: number of chunks
         stream: whether to handle `path` as a stream
         flatten: whether to flatten the output
+        unroll: the `unroll` parameter passed to `jax.lax.scan`
     Returns:
         If `stream` is `True`, this will return a list of `Array` in a form
             [(path_len - 1, dim), (path_len - 1, dim, dim), (path_len - 1, dim, dim, dim), ...]
@@ -155,7 +166,7 @@ def _signature_chunked(
     path_remainder = path[bulk_length - 1 :]
 
     multi_signatures = jax.vmap(
-        partial(_signature, depth=depth, stream=stream, flatten=False)
+        partial(_signature, depth=depth, stream=stream, flatten=False, unroll=unroll)
     )(path_bulk)
 
     if stream:
@@ -172,7 +183,10 @@ def _signature_chunked(
         # initial value is the last of the stream in  the first chunk
         init = [sig[0, -1, ...] for sig in multi_signatures]
         last_sig, bulk_signature = jax.lax.scan(
-            f=scan_fn, init=init, xs=[sig[1:] for sig in multi_signatures]
+            f=scan_fn,
+            init=init,
+            xs=[sig[1:] for sig in multi_signatures],
+            unroll=unroll,
         )
 
         bulk_signature = [
